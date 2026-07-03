@@ -41,3 +41,8 @@ Android/signing/
 # Packaged outputs
 *.apk
 *.aab
+
+# Local release archives and NAS staging
+artifacts/
+nas-backup.local.json
+nas-backup.local.psd1
