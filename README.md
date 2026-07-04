@@ -1,6 +1,6 @@
 # IGNGBBS Android
 
-IGNGBBS Android 是一个面向 `IGNGBBS / IGNG` 社区的非官方 Android 客户端，提供更适合手机端的浏览、阅读、通知和创作管理体验。
+IGNGBBS Android 是一个面向 `IGNGBBS / IGNG` 社区的官方 Android 客户端，提供更适合手机端的浏览、阅读、通知和创作管理体验。
 
 项目仓库：
 
