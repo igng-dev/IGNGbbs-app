@@ -1,84 +1,189 @@
 # IGNGBBS Android
 
-Android client for IGNGBBS.
+IGNGBBS Android 是一个面向 `IGNGBBS / IGNG` 社区的非官方 Android 客户端，提供更适合手机端的浏览、阅读、通知和创作管理体验。
 
-## Project Layout
+项目仓库：
 
-- `Android/`: Android Studio / Gradle project
+- GitHub: [IGNGserver/igngbbs-android](https://github.com/IGNGserver/igngbbs-android)
+- Release 下载: [Releases](https://github.com/IGNGserver/igngbbs-android/releases)
 
-## Requirements
+## 软件简介
 
-- Android Studio with a local Android SDK
-- JDK 11
+这个应用围绕手机端高频使用场景设计，重点覆盖：
 
-## Local Setup
+- 浏览首页内容、专栏内容和筛选后的文章列表
+- 登录 IGNG 账号并在多个已登录账号间切换
+- 阅读文章、保存阅读进度、跳转上次阅读位置
+- 查看评论、发表评论、点赞、举报
+- 查看系统通知和回复通知
+- 查看历史记录与最近访问内容
+- 在移动端使用创作者控制台管理文章、评论、专栏、系列和个人资料
 
-1. Open `Android/` in Android Studio.
-2. Let Android Studio generate `local.properties` for your SDK path.
-3. Sync Gradle and run the app.
+## 主要功能
 
-## Build
+### 1. 账号与登录
 
-Debug build:
+- 支持使用 IGNG 账号登录
+- 支持多账号共存与快速切换
+- 支持退出登录
+- 登录后可同步读取与你账号权限相关的内容
 
-```bash
-cd Android
-./gradlew assembleDebug
-```
+### 2. 首页与内容浏览
 
-On Windows:
+- 首页浏览文章列表
+- 按分类、标签、作者、专栏等条件筛选内容
+- 查看用户主页
+- 浏览专栏及其文章
+
+### 3. 阅读体验
+
+- 内置阅读器页面
+- 支持记录阅读进度
+- 支持恢复到上次阅读位置
+- 支持分享文章链接
+- 支持处理系列文章的连续阅读
+
+### 4. 评论与互动
+
+- 查看文章评论区
+- 发表评论与回复评论
+- 评论点赞
+- 举报内容
+
+### 5. 通知与历史记录
+
+- 通知中心查看系统通知
+- 支持回复通知提醒
+- 支持系统通知开关控制
+- 查看最近访问的历史记录
+- 删除单条历史记录
+
+### 6. 创作者控制台
+
+如果当前账号拥有相应权限，可在移动端直接使用控制台能力：
+
+- 创作者总览
+- 文章管理
+- 新建文章
+- 编辑文章
+- 评论管理
+- 专栏管理
+- 系列管理
+- 创作者资料维护
+- 群组与权限相关管理
+
+## 如何使用
+
+### 安装
+
+1. 打开 [Releases](https://github.com/IGNGserver/igngbbs-android/releases) 页面
+2. 下载最新的 `apk`
+3. 在 Android 设备上安装应用
+
+如果系统提示来源未知，请先在设备设置中允许对应来源安装应用。
+
+### 首次打开
+
+首次进入应用后，建议按下面顺序使用：
+
+1. 先浏览首页与专栏，确认基础内容加载正常
+2. 进入“我的”或账号相关页面登录 IGNG 账号
+3. 登录后再使用历史记录、通知中心、评论和创作者控制台等需要账号状态的功能
+
+### 阅读文章
+
+常见阅读流程：
+
+1. 在首页、专栏页或筛选页打开文章
+2. 进入阅读器后开始浏览正文
+3. 退出前可保存阅读进度
+4. 下次可直接恢复到上次阅读位置
+
+### 管理通知
+
+如果设备允许通知权限，可以在应用内进一步控制：
+
+- 是否接收系统通知
+- 是否接收回复通知
+
+这样可以减少无关提醒，同时保留重要互动消息。
+
+### 使用创作者控制台
+
+登录后，如果你的账号具备创作者权限，可以进入控制台执行移动端管理操作，例如：
+
+- 查看创作者总览数据
+- 管理自己发布的文章
+- 维护专栏和系列
+- 处理评论
+- 编辑创作者资料
+
+## 适用人群
+
+这个应用适合以下用户：
+
+- 希望在手机上方便浏览 IGNGBBS 的普通读者
+- 需要随时查看通知和评论互动的活跃用户
+- 需要用手机处理文章、专栏、系列和评论的创作者
+
+## 技术说明
+
+- 平台：Android
+- UI：Jetpack Compose
+- 语言：Kotlin / Java
+- 最低 Android 版本：`minSdk 24`
+
+默认服务地址通过 Gradle 配置读取，未额外指定时使用生产地址：
+
+- `IGNG_BBS_BASE_URL=https://www.igngbbs.net`
+- `IGNG_SSO_BASE_URL=https://sso.igng.net`
+
+## 本地开发
+
+### 环境要求
+
+- Android Studio
+- Android SDK
+- JDK 11 或兼容版本
+
+### 运行项目
+
+1. 使用 Android Studio 打开 `Android/`
+2. 等待 Gradle 同步完成
+3. 直接运行应用
+
+命令行构建调试包：
 
 ```powershell
 cd Android
 .\gradlew.bat assembleDebug
 ```
 
-## Runtime Configuration
+### 构建正式包
 
-The app reads service endpoints from Gradle properties and falls back to the
-public production endpoints:
+正式包使用本地签名配置，不会上传到 Git：
 
-- `IGNG_BBS_BASE_URL`
-- `IGNG_SSO_BASE_URL`
+- 签名文件目录：`Android/signing/`
+- 本地签名配置：`Android/release-signing.properties`
 
-Example:
-
-```powershell
-cd Android
-.\gradlew.bat assembleDebug -PIGNG_BBS_BASE_URL=https://www.igngbbs.net -PIGNG_SSO_BASE_URL=https://sso.igng.net
-```
-
-## Release Signing
-
-Release builds use a local keystore stored inside the project folder for backup
-and long-term app update compatibility. The keystore and signing properties are
-kept out of Git on purpose.
-
-- Keystore path: `Android/signing/release.keystore`
-- Local config: `Android/release-signing.properties`
-
-Expected properties:
-
-```properties
-storeFile=signing/release.keystore
-storePassword=your-store-password
-keyAlias=release
-keyPassword=your-key-password
-```
-
-Build a signed release APK:
+构建正式 APK：
 
 ```powershell
 cd Android
 .\gradlew.bat assembleRelease
 ```
 
-## Repository Hygiene
+## 发布与仓库约定
 
-- Local SDK paths, build outputs, packaged APK/AAB files, signing files, and
-  private deployment notes are intentionally excluded from version control.
-- Private infrastructure credentials and LAN deployment details are not part of
-  this public repository.
+- Release 安装包通过 GitHub Releases 分发
+- 本地 SDK 路径、签名信息、构建产物、私有配置均不进入版本控制
+- 项目内保留本地签名材料，是为了保证后续版本仍可持续更新安装
+
+## 已知说明
+
+- 某些功能依赖账号权限、等级或站点侧能力开放情况
+- 通知功能依赖 Android 系统通知权限
+- 与创作者权限、专栏权限、系列权限相关的页面，需要你的账号本身具备对应资格
 
 ## License
 
