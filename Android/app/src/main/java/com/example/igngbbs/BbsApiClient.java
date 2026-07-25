@@ -37,8 +37,12 @@ public final class BbsApiClient {
     }
 
     public PostPage fetchPostsPage(int limit, Integer cursor, Integer categoryId, String tag, Integer authorId, Integer columnId) throws Exception {
+        return fetchPostsPage(limit, cursor, categoryId, tag, authorId, columnId, "latest");
+    }
+
+    public PostPage fetchPostsPage(int limit, Integer cursor, Integer categoryId, String tag, Integer authorId, Integer columnId, String sort) throws Exception {
         List<Post> posts = new ArrayList<>();
-        JSONObject root = getJson(buildPostsPath(limit, cursor, categoryId, tag, authorId, columnId));
+        JSONObject root = getJson(buildPostsPath(limit, cursor, categoryId, tag, authorId, columnId, sort));
         JSONArray items = root.optJSONArray("posts");
         if (items == null) {
             return new PostPage(posts, null);
@@ -50,7 +54,7 @@ public final class BbsApiClient {
         return new PostPage(posts, nextCursor);
     }
 
-    private String buildPostsPath(int limit, Integer cursor, Integer categoryId, String tag, Integer authorId, Integer columnId) throws Exception {
+    private String buildPostsPath(int limit, Integer cursor, Integer categoryId, String tag, Integer authorId, Integer columnId, String sort) throws Exception {
         StringBuilder path = new StringBuilder("/api/v1/posts?limit=").append(limit);
         if (cursor != null && cursor > 0) path.append("&cursor=").append(cursor);
         if (categoryId != null && categoryId > 0) path.append("&category_id=").append(categoryId);
@@ -59,6 +63,7 @@ public final class BbsApiClient {
         if (tag != null && !tag.trim().isEmpty()) {
             path.append("&tags=").append(URLEncoder.encode(tag.trim(), StandardCharsets.UTF_8.name()));
         }
+        if ("hot".equals(sort)) path.append("&sort=hot");
         return path.toString();
     }
 
@@ -135,9 +140,7 @@ public final class BbsApiClient {
         JSONObject root = getJson("/api/v1/history");
         JSONArray items = root.optJSONArray("history");
         List<PostHistoryItem> history = new ArrayList<>();
-        if (items == null) {
-            return history;
-        }
+        if (items == null) return history;
         for (int i = 0; i < items.length(); i++) {
             history.add(PostHistoryItem.fromJson(items.getJSONObject(i)));
         }
@@ -147,10 +150,7 @@ public final class BbsApiClient {
     public PostHistoryItem fetchPostHistory(int postId) throws Exception {
         JSONObject root = getJson("/api/v1/posts/" + postId + "/history");
         JSONObject history = root.optJSONObject("history");
-        if (history == null) {
-            return null;
-        }
-        return PostHistoryItem.fromJson(history);
+        return history == null ? null : PostHistoryItem.fromJson(history);
     }
 
     public void deleteHistory(int historyId) throws Exception {
@@ -198,6 +198,67 @@ public final class BbsApiClient {
         return LikeState.fromJson(requestJson("POST", "/api/v1/comments/" + commentId + "/like", null));
     }
 
+    public JSONObject fetchPostFavorite(int postId) throws Exception {
+        return getJson("/api/v1/posts/" + postId + "/favorite");
+    }
+
+    public JSONObject togglePostFavorite(int postId) throws Exception {
+        return requestJson("POST", "/api/v1/posts/" + postId + "/favorite", null);
+    }
+
+    public JSONObject fetchUserFollow(int userId) throws Exception {
+        return getJson("/api/v1/user/" + userId + "/follow");
+    }
+
+    public JSONObject toggleUserFollow(int userId) throws Exception {
+        return requestJson("POST", "/api/v1/user/" + userId + "/follow", null);
+    }
+
+    public JSONObject fetchSubscriptions() throws Exception {
+        return getJson("/api/v1/user/me/subscriptions");
+    }
+
+    public JSONObject fetchColumnSubscription(int columnId) throws Exception {
+        return getJson("/api/v1/columns/" + columnId + "/subscribe");
+    }
+
+    public JSONObject subscribeColumn(int columnId, String verification, String message) throws Exception {
+        JSONObject body = new JSONObject();
+        if (verification != null && !verification.trim().isEmpty()) body.put("verification", verification.trim());
+        if (message != null && !message.trim().isEmpty()) body.put("message", message.trim());
+        return requestJson("POST", "/api/v1/columns/" + columnId + "/subscribe", body);
+    }
+
+    public JSONObject fetchAdminResources(String type) throws Exception {
+        return getJson("/api/mobile/admin/resources?type=" + URLEncoder.encode(type, StandardCharsets.UTF_8.name()));
+    }
+
+    public void deleteAdminResource(String type, int id) throws Exception {
+        requestJson("DELETE", "/api/mobile/admin/resources", new JSONObject().put("type", type).put("id", id));
+    }
+
+    public JSONObject updateAdminResource(String type, int id, String status, String field, boolean value) throws Exception {
+        JSONObject body = new JSONObject().put("type", type).put("id", id);
+        if (status != null) body.put("status", status);
+        if (field != null) body.put("field", field).put("value", value);
+        return requestJson("PATCH", "/api/mobile/admin/resources", body);
+    }
+
+    public JSONObject createAdminNotification(String title, String content, Object targetUsers) throws Exception {
+        return requestJson("POST", "/api/mobile/admin/resources", new JSONObject()
+                .put("type", "notifications").put("title", title).put("content", content).put("targetUsers", targetUsers));
+    }
+
+    public JSONObject fetchPrivacy() throws Exception {
+        return getJson("/api/v1/user/me/privacy");
+    }
+
+    public JSONObject savePrivacy(boolean followersVisible, boolean favoritesVisible) throws Exception {
+        return requestJson("PUT", "/api/v1/user/me/privacy", new JSONObject()
+                .put("allow_followers_visibility", followersVisible)
+                .put("allow_favorites_visibility", favoritesVisible));
+    }
+
     public void report(String targetType, int targetId, String reason, String contentSnapshot, String titleSnapshot) throws Exception {
         JSONObject body = new JSONObject()
                 .put("target_type", targetType)
@@ -240,6 +301,28 @@ public final class BbsApiClient {
             throw new IOException("响应缺少评论内容");
         }
         return CommentItem.fromJson(comment);
+    }
+
+    public JSONArray fetchParagraphComments(int postId) throws Exception {
+        JSONObject root = getJson("/api/v1/posts/" + postId + "/paragraph-comments");
+        return root.optJSONArray("comments") == null ? new JSONArray() : root.optJSONArray("comments");
+    }
+
+    public JSONObject createParagraphComment(int postId, String content, String anchorQuote, Integer parentId) throws Exception {
+        JSONObject body = new JSONObject().put("content", content);
+        if (parentId != null && parentId > 0) {
+            body.put("parent_id", parentId);
+        } else {
+            body.put("anchor_quote", anchorQuote);
+        }
+        JSONObject root = requestJson("POST", "/api/v1/posts/" + postId + "/paragraph-comments", body);
+        JSONObject comment = root.optJSONObject("comment");
+        if (comment == null) throw new IOException("响应缺少段评内容");
+        return comment;
+    }
+
+    public void deleteParagraphComment(int postId, int commentId) throws Exception {
+        requestJson("DELETE", "/api/v1/posts/" + postId + "/paragraph-comments", new JSONObject().put("comment_id", commentId));
     }
 
     public CheckinState fetchMobileCheckin(String token) throws Exception {

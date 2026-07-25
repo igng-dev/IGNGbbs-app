@@ -11,16 +11,11 @@ val releaseSigningProperties = Properties().apply {
         releaseSigningPropertiesFile.inputStream().use { load(it) }
     }
 }
-
 val releaseStoreFile = releaseSigningProperties.getProperty("storeFile")
 val releaseStorePassword = releaseSigningProperties.getProperty("storePassword")
 val releaseKeyAlias = releaseSigningProperties.getProperty("keyAlias")
 val releaseKeyPassword = releaseSigningProperties.getProperty("keyPassword")
-val hasReleaseSigning =
-    !releaseStoreFile.isNullOrBlank() &&
-        !releaseStorePassword.isNullOrBlank() &&
-        !releaseKeyAlias.isNullOrBlank() &&
-        !releaseKeyPassword.isNullOrBlank()
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
 
 android {
     namespace = "com.example.igngbbs"
@@ -34,8 +29,8 @@ android {
         applicationId = "com.example.igngbbs"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -56,18 +51,12 @@ android {
             optimization {
                 enable = false
             }
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
         }
     }
     buildFeatures {
         buildConfig = true
         compose = true
-    }
-    lint {
-        checkReleaseBuilds = false
-        abortOnError = false
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

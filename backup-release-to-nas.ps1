@@ -12,10 +12,10 @@ $nasUser = $config.nasUser
 $nasPassword = $config.nasPassword
 $nasShare = $config.nasShare
 
-$sourceDir = Join-Path $PSScriptRoot 'artifacts\release\v1.0'
+$sourceDir = Join-Path $PSScriptRoot 'artifacts\release\v1.1'
 $files = @(
-    Join-Path $sourceDir 'IGNGBBS-v1.0-release.apk'
-    Join-Path $sourceDir 'IGNGBBS-v1.0-release.apk.sha256'
+    Join-Path $sourceDir 'IGNGBBS-v1.1-release.apk'
+    Join-Path $sourceDir 'IGNGBBS-v1.1-release.apk.sha256'
 )
 
 foreach ($file in $files) {

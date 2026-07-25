@@ -119,6 +119,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -191,6 +192,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import org.json.JSONArray
+import org.json.JSONObject
 import io.noties.markwon.Markwon
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.html.HtmlPlugin
@@ -234,6 +236,9 @@ private sealed interface Screen {
     data object Columns : Screen
     data object Account : Screen
     data object History : Screen
+    data object Favorites : Screen
+    data object Following : Screen
+    data object Privacy : Screen
     data object Notifications : Screen
     data object ConsoleHome : Screen
     data object ConsolePosts : Screen
@@ -241,6 +246,7 @@ private sealed interface Screen {
     data class ConsolePostEditor(val postId: Int) : Screen
     data class ConsolePostSettings(val postId: Int) : Screen
     data object ConsoleComments : Screen
+    data object ConsoleAdmin : Screen
     data object ConsoleReview : Screen
     data object ConsoleGroups : Screen
     data object ConsoleGroupCreate : Screen
@@ -325,6 +331,11 @@ private data class ArticleSectionEntry(
     val content: String
 )
 
+private data class ParagraphCommentTarget(
+    val postId: Int,
+    val quote: String
+)
+
 private const val ARTICLE_BODY_SELECTION_EPOCH_TAG = 0x1A2B3C4D
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -353,6 +364,7 @@ private fun BbsApp(
     var isRefreshing by remember { mutableStateOf(false) }
     var isLoadingMore by remember { mutableStateOf(false) }
     var nextCursor by remember { mutableStateOf<Int?>(null) }
+    var homeSort by remember { mutableStateOf("latest") }
     var latestRequestId by remember { mutableIntStateOf(0) }
     var latestPostRequestId by remember { mutableIntStateOf(0) }
     var latestAuxRequestId by remember { mutableIntStateOf(0) }
@@ -652,7 +664,7 @@ private fun BbsApp(
                             titleScreen.columnId
                         )
                         Screen.Account -> PostPage(emptyList(), null)
-                        else -> apiClient.fetchPostsPage(20, requestCursor, null, null, null, null)
+                        else -> apiClient.fetchPostsPage(20, requestCursor, null, null, null, null, homeSort)
                     }
                 }
             }.onSuccess { page ->
@@ -756,6 +768,8 @@ private fun BbsApp(
             Screen.Columns -> loadColumns()
             Screen.Account -> Unit
             Screen.History -> Unit
+            Screen.Favorites, Screen.Following -> Unit
+            Screen.Privacy -> Unit
             Screen.Notifications -> Unit
             Screen.ConsoleHome -> Unit
             Screen.ConsolePosts -> Unit
@@ -763,6 +777,7 @@ private fun BbsApp(
             is Screen.ConsolePostEditor -> Unit
             is Screen.ConsolePostSettings -> Unit
             Screen.ConsoleComments -> Unit
+            Screen.ConsoleAdmin -> Unit
             Screen.ConsoleReview -> Unit
             Screen.ConsoleGroups -> Unit
             Screen.ConsoleGroupCreate -> Unit
@@ -791,6 +806,8 @@ private fun BbsApp(
             Screen.ConsoleHome -> 2
             Screen.Account -> 3
             Screen.History -> null
+            Screen.Favorites, Screen.Following -> null
+            Screen.Privacy -> null
             Screen.Notifications -> null
             is Screen.FilteredPosts -> 0
             Screen.ConsolePosts,
@@ -798,6 +815,7 @@ private fun BbsApp(
             is Screen.ConsolePostEditor,
             is Screen.ConsolePostSettings,
             Screen.ConsoleComments,
+            Screen.ConsoleAdmin,
             Screen.ConsoleReview,
             Screen.ConsoleGroups,
             Screen.ConsoleGroupCreate,
@@ -847,6 +865,8 @@ private fun BbsApp(
             Screen.Columns -> loadColumns()
             Screen.Account -> state = LoadState.Content
             Screen.History -> state = LoadState.Content
+            Screen.Favorites, Screen.Following -> state = LoadState.Content
+            Screen.Privacy -> state = LoadState.Content
             Screen.Notifications -> state = LoadState.Content
             Screen.ConsoleHome -> state = LoadState.Content
             Screen.ConsolePosts -> state = LoadState.Content
@@ -854,6 +874,7 @@ private fun BbsApp(
             is Screen.ConsolePostEditor -> state = LoadState.Content
             is Screen.ConsolePostSettings -> state = LoadState.Content
             Screen.ConsoleComments -> state = LoadState.Content
+            Screen.ConsoleAdmin -> state = LoadState.Content
             Screen.ConsoleReview -> state = LoadState.Content
             Screen.ConsoleGroups -> state = LoadState.Content
             Screen.ConsoleGroupCreate -> state = LoadState.Content
@@ -909,6 +930,8 @@ private fun BbsApp(
                 Screen.Columns -> loadColumns()
                 Screen.Account -> state = LoadState.Content
                 Screen.History -> state = LoadState.Content
+                Screen.Favorites, Screen.Following -> state = LoadState.Content
+                Screen.Privacy -> state = LoadState.Content
                 Screen.Notifications -> state = LoadState.Content
                 Screen.ConsoleHome -> state = LoadState.Content
                 Screen.ConsolePosts -> state = LoadState.Content
@@ -916,6 +939,7 @@ private fun BbsApp(
             is Screen.ConsolePostEditor -> state = LoadState.Content
                 is Screen.ConsolePostSettings -> state = LoadState.Content
                 Screen.ConsoleComments -> state = LoadState.Content
+                Screen.ConsoleAdmin -> state = LoadState.Content
                 Screen.ConsoleReview -> state = LoadState.Content
                 Screen.ConsoleGroups -> state = LoadState.Content
                 Screen.ConsoleGroupCreate -> state = LoadState.Content
@@ -1244,7 +1268,12 @@ private fun BbsApp(
                                 onDirectPostOpen = { openScreen(Screen.Detail(it, fromInternalLink = true)) },
                                 onCategoryClick = { openScreen(Screen.FilteredPosts("分类：${it.categoryName}", categoryId = it.categoryId)) },
                                 onTagClick = { openScreen(Screen.FilteredPosts("标签：$it", tag = it)) },
-                                onAuthorClick = { openScreen(Screen.UserProfile(it.userId, it.authorName)) }
+                                onAuthorClick = { openScreen(Screen.UserProfile(it.userId, it.authorName)) },
+                                sortLabel = if (homeSort == "hot") "热门" else "最新",
+                                onToggleSort = {
+                                    homeSort = if (homeSort == "hot") "latest" else "hot"
+                                    loadPosts(Screen.Home, reset = true)
+                                }
                             )
                             is Screen.FilteredPosts -> PostListScreen(
                                 listKey = "filtered-${targetScreen.categoryId}-${targetScreen.tag}-${targetScreen.authorId}-${targetScreen.columnId}",
@@ -1271,11 +1300,15 @@ private fun BbsApp(
                             onViewPosts = { profile ->
                                 openScreen(Screen.FilteredPosts("用户：${profile.displayName()}", authorId = profile.id))
                             },
-                            onPostClick = { openScreen(Screen.Detail(it)) }
+                            onPostClick = { openScreen(Screen.Detail(it)) },
+                            apiClient = apiClient,
+                            authState = authState
                         )
                             Screen.Columns -> ColumnsScreen(
                                 columns = columns,
-                                onColumnClick = { openScreen(Screen.FilteredPosts("专栏：${it.name}", columnId = it.id)) }
+                                onColumnClick = { openScreen(Screen.FilteredPosts("专栏：${it.name}", columnId = it.id)) },
+                                apiClient = apiClient,
+                                authState = authState
                             )
                             Screen.Account -> AccountScreen(
                                 authState = authState,
@@ -1301,7 +1334,10 @@ private fun BbsApp(
                                 onUseGuest = { useGuestAccount() },
                                 onLogout = { logout() },
                                 onRetrySession = { restoreSession() },
-                                onOpenHistory = { openScreen(Screen.History) }
+                                onOpenHistory = { openScreen(Screen.History) },
+                                onOpenFavorites = { openScreen(Screen.Favorites) },
+                                onOpenFollowing = { openScreen(Screen.Following) },
+                                onOpenPrivacy = { openScreen(Screen.Privacy) }
                             )
                             Screen.History -> HistoryScreen(
                                 apiClient = apiClient,
@@ -1309,6 +1345,9 @@ private fun BbsApp(
                                 onOpenPost = { openScreen(Screen.Detail(it)) },
                                 onShowBanner = { showBanner(it) }
                             )
+                            Screen.Favorites -> SavedItemsScreen(apiClient, authState, "favorites", { openScreen(Screen.Detail(it)) }, { id, name -> openScreen(Screen.UserProfile(id, name)) })
+                            Screen.Following -> SavedItemsScreen(apiClient, authState, "following", { openScreen(Screen.Detail(it)) }, { id, name -> openScreen(Screen.UserProfile(id, name)) })
+                            Screen.Privacy -> PrivacyScreen(apiClient, authState)
                             Screen.Notifications -> NotificationCenterScreen(
                                 apiClient = apiClient,
                                 authState = authState,
@@ -1321,6 +1360,7 @@ private fun BbsApp(
                                 authState = authState,
                                 onOpenPosts = { openScreen(Screen.ConsolePosts) },
                                 onOpenComments = { openScreen(Screen.ConsoleComments) },
+                                onOpenAdmin = { openScreen(Screen.ConsoleAdmin) },
                                 onOpenReview = { openScreen(Screen.ConsoleReview) },
                                 onOpenGroups = { openScreen(Screen.ConsoleGroups) },
                                 onOpenPermissions = { openScreen(Screen.ConsolePermissions) },
@@ -1361,6 +1401,7 @@ private fun BbsApp(
                                 authState = authState,
                                 onOpenPost = { openScreen(Screen.Detail(it)) }
                             )
+                            Screen.ConsoleAdmin -> AdminResourcesScreen(apiClient, authState)
                             Screen.ConsoleReview -> CreatorReviewCenterScreen(
                                 apiClient = apiClient,
                                 authState = authState
@@ -1634,7 +1675,10 @@ private fun AccountScreen(
     onUseGuest: () -> Unit,
     onLogout: () -> Unit,
     onRetrySession: () -> Unit,
-    onOpenHistory: () -> Unit
+    onOpenHistory: () -> Unit,
+    onOpenFavorites: () -> Unit,
+    onOpenFollowing: () -> Unit,
+    onOpenPrivacy: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var identifier by remember { mutableStateOf("") }
@@ -1833,6 +1877,9 @@ private fun AccountScreen(
                         onClick = onOpenHistory
                     )
                 }
+                item { QuickEntryCard("收藏文章", "查看和继续阅读已收藏的文章。", Icons.Default.Favorite, onOpenFavorites) }
+                item { QuickEntryCard("订阅用户", "查看你订阅的创作者。", Icons.Default.Person, onOpenFollowing) }
+                item { QuickEntryCard("隐私设置", "管理订阅和收藏的公开范围。", Icons.Default.Visibility, onOpenPrivacy) }
                 item {
                     AppSettingsCard(
                         hapticsEnabled = hapticsEnabled,
@@ -1900,6 +1947,9 @@ private fun AccountScreen(
                         onClick = onOpenHistory
                     )
                 }
+                item { QuickEntryCard("收藏文章", "登录后查看已收藏的文章。", Icons.Default.Favorite, onOpenFavorites) }
+                item { QuickEntryCard("订阅用户", "登录后查看订阅的创作者。", Icons.Default.Person, onOpenFollowing) }
+                item { QuickEntryCard("隐私设置", "登录后管理订阅和收藏的公开范围。", Icons.Default.Visibility, onOpenPrivacy) }
                 item {
                     AppSettingsCard(
                         hapticsEnabled = hapticsEnabled,
@@ -2489,10 +2539,11 @@ private fun HistoryScreen(
             else -> items(filtered, key = { "history-${it.id}-${it.post?.id ?: 0}" }) { item ->
                 val post = item.post ?: return@items
                 Card(
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(28.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
                 ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             CategoryPill(post.categoryName)
                             AssistChip(
@@ -2581,11 +2632,113 @@ private fun EmptyCard(message: String) {
 }
 
 @Composable
+private fun SavedItemsScreen(
+    apiClient: BbsApiClient,
+    authState: AuthState,
+    mode: String,
+    onOpenPost: (Int) -> Unit,
+    onOpenUser: (Int, String) -> Unit
+) {
+    var payload by remember(mode) { mutableStateOf<JSONObject?>(null) }
+    var loading by remember(mode) { mutableStateOf(true) }
+    var error by remember(mode) { mutableStateOf<String?>(null) }
+    LaunchedEffect(mode, authState) {
+        if (authState !is AuthState.SignedIn) {
+            error = "请先登录后查看此内容"
+            loading = false
+        } else {
+            runCatching { withContext(Dispatchers.IO) { apiClient.fetchSubscriptions() } }
+                .onSuccess { payload = it }
+                .onFailure { error = it.message ?: "加载失败" }
+            loading = false
+        }
+    }
+    val items = payload?.optJSONArray(if (mode == "favorites") "favorites" else "following")
+    ScrollableLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { Text(if (mode == "favorites") "收藏文章" else "订阅用户", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        if (loading) item { LoadingState() }
+        error?.let { item { NoticeCard("暂时不可用", it) } }
+        if (!loading && error == null && (items == null || items.length() == 0)) item { EmptyState(if (mode == "favorites") "暂无收藏文章" else "暂无订阅用户") }
+        items?.let { array ->
+            items(array.length()) { index ->
+                val item = array.optJSONObject(index) ?: return@items
+                if (mode == "favorites") {
+                    val post = item.optJSONObject("post")
+                    val postId = post?.optInt("post_id", -1) ?: -1
+                    val author = post?.optJSONObject("user")
+                    ActivityCard(post?.optString("title", "未命名文章").orEmpty(), author?.optString("nickname", author.optString("username", "")).orEmpty()) {
+                        if (postId > 0) onOpenPost(postId)
+                    }
+                } else {
+                    val user = item.optJSONObject("following")
+                    val userId = user?.optInt("id", -1) ?: -1
+                    val name = user?.optString("nickname", user.optString("username", "")).orEmpty()
+                    ActivityCard(name.ifBlank { "未命名用户" }, "@${user?.optString("username", "").orEmpty()}") {
+                        if (userId > 0) onOpenUser(userId, name)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrivacyScreen(apiClient: BbsApiClient, authState: AuthState) {
+    if (authState !is AuthState.SignedIn) {
+        EmptyState("请先登录后管理隐私设置")
+        return
+    }
+    val scope = rememberCoroutineScope()
+    var followersVisible by remember { mutableStateOf(false) }
+    var favoritesVisible by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        runCatching { withContext(Dispatchers.IO) { apiClient.fetchPrivacy() } }
+            .onSuccess { response ->
+                val privacy = response.optJSONObject("privacy")
+                followersVisible = privacy?.optBoolean("allow_followers_visibility", false) ?: false
+                favoritesVisible = privacy?.optBoolean("allow_favorites_visibility", false) ?: false
+            }
+            .onFailure { error = it.message ?: "隐私设置加载失败" }
+        loading = false
+    }
+    fun save() {
+        saving = true
+        scope.launch {
+            runCatching { withContext(Dispatchers.IO) { apiClient.savePrivacy(followersVisible, favoritesVisible) } }
+                .onFailure { error = it.message ?: "保存失败" }
+            saving = false
+        }
+    }
+    ScrollableLazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("隐私设置", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        error?.let { item { NoticeCard("操作失败", it) } }
+        if (loading) item { LoadingState() }
+        if (!loading) item {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) { Text("公开订阅用户", modifier = Modifier.weight(1f)); Switch(followersVisible, { followersVisible = it; save() }) }
+                    Row(verticalAlignment = Alignment.CenterVertically) { Text("公开收藏文章", modifier = Modifier.weight(1f)); Switch(favoritesVisible, { favoritesVisible = it; save() }) }
+                    if (saving) Text("保存中", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun CreatorOverviewScreen(
     apiClient: BbsApiClient,
     authState: AuthState,
     onOpenPosts: () -> Unit,
     onOpenComments: () -> Unit,
+    onOpenAdmin: () -> Unit,
     onOpenReview: () -> Unit,
     onOpenGroups: () -> Unit,
     onOpenPermissions: () -> Unit,
@@ -2668,6 +2821,7 @@ private fun CreatorOverviewScreen(
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(onClick = onOpenPosts, modifier = Modifier.fillMaxWidth()) { Text("文章管理") }
                     Button(onClick = onOpenComments, modifier = Modifier.fillMaxWidth()) { Text("评论管理") }
+                    Button(onClick = onOpenAdmin, modifier = Modifier.fillMaxWidth()) { Text("全站资源管理") }
                     Button(onClick = onOpenReview, modifier = Modifier.fillMaxWidth()) { Text("处理中心") }
                     Button(onClick = onOpenGroups, modifier = Modifier.fillMaxWidth()) { Text("群组管理") }
                     Button(onClick = onOpenPermissions, modifier = Modifier.fillMaxWidth()) { Text("权限状态") }
@@ -7207,7 +7361,9 @@ private fun PostListScreen(
     onDirectPostOpen: (Int) -> Unit,
     onCategoryClick: (Post) -> Unit,
     onTagClick: (String) -> Unit,
-    onAuthorClick: (Post) -> Unit
+    onAuthorClick: (Post) -> Unit,
+    sortLabel: String? = null,
+    onToggleSort: (() -> Unit)? = null
 ) {
     key(listKey) {
         val listState = rememberLazyListState()
@@ -7305,6 +7461,9 @@ private fun PostListScreen(
                             IconButton(onClick = { showSearchSheet = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "搜索")
                             }
+                        }
+                        if (sortLabel != null && onToggleSort != null) {
+                            TextButton(onClick = onToggleSort) { Text("排序：$sortLabel") }
                         }
                         searchError?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -7558,7 +7717,12 @@ private fun ScrollableLazyColumn(
 }
 
 @Composable
-private fun ColumnsScreen(columns: List<ColumnItem>, onColumnClick: (ColumnItem) -> Unit) {
+private fun ColumnsScreen(
+    columns: List<ColumnItem>,
+    onColumnClick: (ColumnItem) -> Unit,
+    apiClient: BbsApiClient,
+    authState: AuthState
+) {
     ScrollableLazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 28.dp),
@@ -7587,6 +7751,9 @@ private fun ColumnsScreen(columns: List<ColumnItem>, onColumnClick: (ColumnItem)
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+                        if (authState is AuthState.SignedIn) {
+                            ColumnSubscriptionButton(apiClient, column)
+                        }
                     }
                 }
             }
@@ -7595,16 +7762,169 @@ private fun ColumnsScreen(columns: List<ColumnItem>, onColumnClick: (ColumnItem)
 }
 
 @Composable
+private fun AdminResourcesScreen(apiClient: BbsApiClient, authState: AuthState) {
+    if (authState !is AuthState.SignedIn) {
+        EmptyState("请先登录")
+        return
+    }
+    val scope = rememberCoroutineScope()
+    val types = listOf("posts" to "文章", "pages" to "页面", "comments" to "评论", "columns" to "专栏", "series" to "系列", "reviews" to "审核队列", "reports" to "举报", "notifications" to "系统通知", "users" to "用户")
+    var selectedType by remember { mutableStateOf("summary") }
+    var payload by remember { mutableStateOf<JSONObject?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var deleteTarget by remember { mutableStateOf<JSONObject?>(null) }
+    var showNotificationDialog by remember { mutableStateOf(false) }
+
+    fun reload() {
+        loading = true
+        scope.launch {
+            runCatching { withContext(Dispatchers.IO) { apiClient.fetchAdminResources(selectedType) } }
+                .onSuccess { payload = it; error = null }
+                .onFailure { error = it.message ?: "需要全站管理员权限" }
+            loading = false
+        }
+    }
+    LaunchedEffect(selectedType) { reload() }
+    deleteTarget?.let { item ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("确认删除") },
+            text = { Text("此操作不可恢复。") },
+            confirmButton = { TextButton(onClick = {
+                val id = item.optInt("_mobile_id", -1)
+                scope.launch {
+                    runCatching { withContext(Dispatchers.IO) { apiClient.deleteAdminResource(selectedType, id) } }
+                        .onSuccess { deleteTarget = null; reload() }
+                        .onFailure { error = it.message ?: "删除失败" }
+                }
+            }) { Text("删除") } },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("取消") } }
+        )
+    }
+    if (showNotificationDialog) {
+        var title by remember { mutableStateOf("") }
+        var content by remember { mutableStateOf("") }
+        var sending by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!sending) showNotificationDialog = false }, title = { Text("发送系统通知") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("将发送给全部正常状态用户。")
+                OutlinedTextField(title, { title = it }, label = { Text("标题") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(content, { content = it }, label = { Text("内容") }, modifier = Modifier.fillMaxWidth(), minLines = 4)
+            } },
+            confirmButton = { TextButton(enabled = title.trim().isNotEmpty() && content.trim().isNotEmpty() && !sending, onClick = {
+                sending = true
+                scope.launch { runCatching { withContext(Dispatchers.IO) { apiClient.createAdminNotification(title.trim(), content.trim(), "all") } }
+                    .onSuccess { showNotificationDialog = false; reload() }.onFailure { error = it.message ?: "发送失败" }; sending = false }
+            }) { Text("发送") } }, dismissButton = { TextButton(enabled = !sending, onClick = { showNotificationDialog = false }) { Text("取消") } }
+        )
+    }
+    ScrollableLazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("全站资源管理", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        item {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                types.forEach { (key, label) -> FilterChip(selected = selectedType == key, onClick = { selectedType = key }, label = { Text(label) }) }
+            }
+        }
+        if (selectedType == "notifications") item { Button(onClick = { showNotificationDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("发送系统通知") } }
+        error?.let { item { NoticeCard("访问受限", it) } }
+        if (loading) item { LoadingState() }
+        if (selectedType == "summary") {
+            payload?.optJSONObject("counts")?.let { counts ->
+                item { Text("资源统计", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
+                types.forEach { (key, label) -> item { ActivityCard(label, "${counts.optInt(key, 0)} 项") {} } }
+            }
+        } else {
+            payload?.optJSONArray("items")?.let { items ->
+                if (!loading && items.length() == 0) item { EmptyState("暂无资源") }
+                items(items.length()) { index ->
+                    val item = items.optJSONObject(index) ?: return@items
+                    val id = item.optInt("post_id", item.optInt("comment_id", item.optInt("page_id", item.optInt("id", -1))))
+                    val title = item.optString("title", item.optString("name", item.optString("username", item.optString("target_type", "资源 #$id"))))
+                    val detail = item.optString("status", item.optString("slug", item.optString("created_at", "")))
+                    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (selectedType in setOf("reviews", "reports") && id > 0) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf("approved" to "通过", "rejected" to "驳回", "failed" to "失效").forEach { (status, label) ->
+                                        TextButton(onClick = { scope.launch { runCatching { withContext(Dispatchers.IO) { apiClient.updateAdminResource(selectedType, id, status, null, false) } }.onSuccess { reload() }.onFailure { error = it.message ?: "更新失败" } } }) { Text(label) }
+                                    }
+                                }
+                            }
+                            if (selectedType == "users" && id > 0) {
+                                listOf("can_post" to "发帖", "can_comment" to "评论", "can_view" to "浏览", "can_create_column" to "建专栏", "can_create_series" to "建系列").forEach { (field, label) ->
+                                    val enabled = item.optBoolean(field, false)
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(label)
+                                        Switch(checked = enabled, onCheckedChange = { value -> scope.launch { runCatching { withContext(Dispatchers.IO) { apiClient.updateAdminResource("users", id, null, field, value) } }.onSuccess { item.put(field, value); reload() }.onFailure { error = it.message ?: "权限更新失败" } } })
+                                    }
+                                }
+                            }
+                            if (selectedType in setOf("posts", "comments", "pages", "notifications") && id > 0) {
+                                TextButton(onClick = { item.put("_mobile_id", id); deleteTarget = item }) { Text("删除") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnSubscriptionButton(apiClient: BbsApiClient, column: ColumnItem) {
+    val scope = rememberCoroutineScope()
+    var status by remember(column.id) { mutableStateOf("") }
+    var loading by remember(column.id) { mutableStateOf(true) }
+    var submitting by remember(column.id) { mutableStateOf(false) }
+    LaunchedEffect(column.id) {
+        runCatching { withContext(Dispatchers.IO) { apiClient.fetchColumnSubscription(column.id) } }
+            .onSuccess { status = it.optJSONObject("subscription")?.optString("status", "") ?: "" }
+        loading = false
+    }
+    TextButton(
+        enabled = !loading && !submitting && status != "PENDING" && status != "APPROVED",
+        onClick = {
+            submitting = true
+            scope.launch {
+                runCatching { withContext(Dispatchers.IO) { apiClient.subscribeColumn(column.id, null, null) } }
+                    .onSuccess { status = it.optJSONObject("subscription")?.optString("status", "") ?: "" }
+                submitting = false
+            }
+        }
+    ) {
+        Text(when {
+            loading -> "读取订阅状态"
+            status == "APPROVED" -> "已订阅"
+            status == "PENDING" -> "订阅审核中"
+            else -> "订阅专栏"
+        })
+    }
+}
+
+@Composable
 private fun UserProfileScreen(
     profile: UserProfile?,
     onViewPosts: (UserProfile) -> Unit,
-    onPostClick: (Int) -> Unit
+    onPostClick: (Int) -> Unit,
+    apiClient: BbsApiClient,
+    authState: AuthState
 ) {
     if (profile == null) {
         EmptyState("用户资料为空")
         return
     }
 
+    val scope = rememberCoroutineScope()
+    var following by remember(profile.id) { mutableStateOf(false) }
+    var followLoading by remember(profile.id) { mutableStateOf(false) }
+    LaunchedEffect(profile.id) {
+        runCatching { withContext(Dispatchers.IO) { apiClient.fetchUserFollow(profile.id) } }
+            .onSuccess { following = it.optBoolean("following", false) }
+    }
     ScrollableLazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 28.dp),
@@ -7660,6 +7980,16 @@ private fun UserProfileScreen(
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { onViewPosts(profile) }) {
                         Text("查看 TA 的文章")
+                    }
+                    if (authState is AuthState.SignedIn && profile.id != authState.session.user.id) {
+                        TextButton(enabled = !followLoading, onClick = {
+                            followLoading = true
+                            scope.launch {
+                                runCatching { withContext(Dispatchers.IO) { apiClient.toggleUserFollow(profile.id) } }
+                                    .onSuccess { following = it.optBoolean("following", false) }
+                                followLoading = false
+                            }
+                        }) { Text(if (following) "取消订阅" else "订阅用户") }
                     }
                 }
             }
@@ -7875,6 +8205,8 @@ private fun DetailScreen(
     var likeState by remember(post.id) { mutableStateOf(LikeState(false, post.likes)) }
     var likeError by remember(post.id) { mutableStateOf<String?>(null) }
     var likeLoading by remember(post.id) { mutableStateOf(false) }
+    var favorited by remember(post.id) { mutableStateOf(false) }
+    var favoriteLoading by remember(post.id) { mutableStateOf(false) }
     var comments by remember(post.id) { mutableStateOf<List<CommentItem>>(emptyList()) }
     var commentsLoading by remember(post.id) { mutableStateOf(false) }
     var commentError by remember(post.id) { mutableStateOf<String?>(null) }
@@ -7895,6 +8227,35 @@ private fun DetailScreen(
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val articleSections = remember(post.id, post.content, post.format) { extractArticleSections(post) }
+    var paragraphCommentTarget by remember(post.id) { mutableStateOf<ParagraphCommentTarget?>(null) }
+    var paragraphCommentItems by remember(post.id) { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var deletingCommentId by remember(post.id) { mutableIntStateOf(0) }
+    val paragraphCommentModels = remember(paragraphCommentItems) {
+        paragraphCommentItems.flatMap { root ->
+            buildList {
+                add(CommentItem.fromJson(root))
+                val replies = root.optJSONArray("replies")
+                if (replies != null) for (replyIndex in 0 until replies.length()) {
+                    replies.optJSONObject(replyIndex)?.let { add(CommentItem.fromJson(it)) }
+                }
+            }
+        }
+    }
+    val paragraphCommentCount = paragraphCommentModels.size
+    val currentUserId = (authState as? AuthState.SignedIn)?.session?.user?.id
+    val paragraphCommentRoots = remember(paragraphCommentModels) {
+        val groups = paragraphCommentModels.groupBy { it.parentId }
+        groups[0].orEmpty().sortedWith(compareByDescending<CommentItem> { root ->
+            root.likeCount + paragraphCommentModels.count { it.parentId == root.id }
+        }.thenByDescending { it.createdAt })
+    }
+    val paragraphCommentQuotes = remember(paragraphCommentItems) {
+        paragraphCommentItems.mapNotNull { root ->
+            val id = root.optInt("id", 0)
+            val quote = root.optString("anchor_quote").normalizeParagraphQuote()
+            if (id > 0 && quote.isNotBlank()) id to quote else null
+        }.toMap()
+    }
     val leadingItemCount = (if (post.hasAccessNotice()) 1 else 0) +
         (if (fallbackReason != null) 1 else 0) +
         (if (signedIn && !historyLoading && historyItem?.hasProgressAnchor() == true) 1 else 0) +
@@ -7945,6 +8306,20 @@ private fun DetailScreen(
             }.also {
                 likeLoading = false
             }
+        }
+    }
+
+    fun toggleFavorite() {
+        if (!signedIn || favoriteLoading) {
+            if (!signedIn) likeError = "请先登录后收藏文章"
+            return
+        }
+        favoriteLoading = true
+        scope.launch {
+            runCatching { withContext(Dispatchers.IO) { apiClient.togglePostFavorite(post.id) } }
+                .onSuccess { favorited = it.optBoolean("favorited", false) }
+                .onFailure { likeError = it.message ?: "收藏操作失败" }
+            favoriteLoading = false
         }
     }
 
@@ -8069,12 +8444,19 @@ private fun DetailScreen(
 
     LaunchedEffect(post.id, authState) {
         loadSocial()
+        runCatching { withContext(Dispatchers.IO) { apiClient.fetchPostFavorite(post.id) } }
+            .onSuccess { favorited = it.optBoolean("favorited", false) }
     }
 
     LaunchedEffect(post.id) {
         runCatching {
             withContext(Dispatchers.IO) { apiClient.recordPostView(post.id) }
         }
+    }
+
+    LaunchedEffect(post.id) {
+        runCatching { withContext(Dispatchers.IO) { apiClient.fetchParagraphComments(post.id) } }
+            .onSuccess { values -> paragraphCommentItems = (0 until values.length()).mapNotNull { values.optJSONObject(it) } }
     }
 
     LaunchedEffect(post.id, signedIn) {
@@ -8263,7 +8645,7 @@ private fun DetailScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         Stat(Icons.Default.Visibility, "${post.views} 阅读")
                         Stat(if (likeState.liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "${likeState.likeCount} 喜欢")
-                        Stat(Icons.Default.ChatBubbleOutline, "${post.comments} 评论")
+                        Stat(Icons.Default.ChatBubbleOutline, "${comments.size + paragraphCommentCount} 评论")
                     }
                     likeError?.let {
                         Spacer(Modifier.height(8.dp))
@@ -8282,6 +8664,11 @@ private fun DetailScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(if (likeState.liked) "取消喜欢" else "喜欢")
+                        }
+                        TextButton(onClick = { toggleFavorite() }, enabled = !favoriteLoading) {
+                            Icon(if (favorited) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (favorited) "取消收藏" else "收藏")
                         }
                         TextButton(onClick = { onSharePost(post) }) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -8352,51 +8739,51 @@ private fun DetailScreen(
         } else {
             items(articleSections.size, key = { index -> "section-${post.id}-${articleSections[index].anchor}" }) { index ->
                 val section = articleSections[index]
-                Card(
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = section.title.ifBlank { "未命名章节" },
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "#${section.anchor}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                TextButton(onClick = { copySectionLink(section) }) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("复制链接")
+                val paragraphs = section.content.split(Regex("\\n\\s*\\n"))
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = section.title.ifBlank { "未命名章节" },
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(text = "#${section.anchor}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(onClick = { copySectionLink(section) }) { Icon(Icons.Default.ContentCopy, contentDescription = "复制链接") }
+                        IconButton(onClick = { saveProgress(section.anchor) }, enabled = signedIn && !progressSaving) { Icon(Icons.Default.Book, contentDescription = "记录进度") }
+                    }
+                    paragraphs.forEach { paragraph ->
+                        val quote = paragraph.normalizeParagraphQuote()
+                        val count = paragraphCommentItems.firstOrNull { it.optString("anchor_quote").normalizeParagraphQuote() == quote }
+                            ?.let { root -> 1 + (root.optJSONArray("replies")?.length() ?: 0) } ?: 0
+                        Column(Modifier.fillMaxWidth()) {
+                            if (quote.isNotBlank()) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                    ArticleContentBlock(
+                                        content = paragraph,
+                                        format = post.format,
+                                        modifier = Modifier.weight(1f),
+                                        selectionEpoch = selectionEpoch,
+                                        onOpenInternalPost = onOpenInternalPost
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(top = 2.dp)
+                                            .clickable { paragraphCommentTarget = ParagraphCommentTarget(post.id, quote) }
+                                            .padding(horizontal = 3.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Icon(Icons.Default.ChatBubbleOutline, contentDescription = "段评", modifier = Modifier.size(14.dp))
+                                        Text(count.toString(), style = MaterialTheme.typography.labelSmall)
+                                    }
                                 }
-                                TextButton(
-                                    onClick = { saveProgress(section.anchor) },
-                                    enabled = signedIn && !progressSaving
-                                ) {
-                                    Icon(Icons.Default.Book, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(if (progressSaving) "保存中" else "记录进度")
-                                }
+                            } else {
+                                ArticleContentBlock(content = paragraph, format = post.format, modifier = Modifier.fillMaxWidth(), selectionEpoch = selectionEpoch, onOpenInternalPost = onOpenInternalPost)
                             }
                         }
-                        ArticleContentBlock(
-                            content = section.content,
-                            format = post.format,
-                            modifier = Modifier.fillMaxWidth(),
-                            selectionEpoch = selectionEpoch,
-                            onOpenInternalPost = onOpenInternalPost
-                        )
                     }
                 }
             }
@@ -8404,6 +8791,11 @@ private fun DetailScreen(
         item {
             CommentsSection(
                 comments = comments,
+                paragraphComments = paragraphCommentModels,
+                paragraphCommentRoots = paragraphCommentRoots,
+                paragraphCommentQuotes = paragraphCommentQuotes,
+                currentUserId = currentUserId,
+                deletingCommentId = deletingCommentId,
                 loading = commentsLoading,
                 error = commentError,
                 signedIn = signedIn,
@@ -8418,6 +8810,23 @@ private fun DetailScreen(
                 },
                 onCancelReply = { replyTarget = null },
                 onSubmit = { submitComment() },
+                onDeleteComment = { comment, isParagraph ->
+                    if (deletingCommentId == 0) {
+                        deletingCommentId = comment.id
+                        scope.launch {
+                            runCatching {
+                                withContext(Dispatchers.IO) {
+                                    if (isParagraph) apiClient.deleteParagraphComment(post.id, comment.id) else apiClient.deleteCreatorComment(comment.id)
+                                }
+                            }.onSuccess {
+                                loadSocial()
+                                runCatching { withContext(Dispatchers.IO) { apiClient.fetchParagraphComments(post.id) } }
+                                    .onSuccess { values -> paragraphCommentItems = (0 until values.length()).mapNotNull { values.optJSONObject(it) } }
+                            }.onFailure { commentError = it.message ?: "删除评论失败" }
+                            deletingCommentId = 0
+                        }
+                    }
+                },
                 onRetry = { loadSocial() },
                 likingCommentIds = likingCommentIds,
                 reportedTargets = reportedTargets,
@@ -8425,6 +8834,121 @@ private fun DetailScreen(
                 onReport = { openReport(it) },
                 onCommentAuthorClick = onCommentAuthorClick
             )
+        }
+    }
+    paragraphCommentTarget?.let { target ->
+        ParagraphCommentsSheet(
+            apiClient = apiClient,
+            authState = authState,
+            target = target,
+            onDismiss = { paragraphCommentTarget = null }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ParagraphCommentsSheet(
+    apiClient: BbsApiClient,
+    authState: AuthState,
+    target: ParagraphCommentTarget,
+    onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var comments by remember(target) { mutableStateOf<JSONArray?>(null) }
+    var loading by remember(target) { mutableStateOf(true) }
+    var error by remember(target) { mutableStateOf<String?>(null) }
+    var content by remember(target) { mutableStateOf("") }
+    var replyTo by remember(target) { mutableStateOf<CommentItem?>(null) }
+    var submitting by remember(target) { mutableStateOf(false) }
+    var deletingId by remember(target) { mutableIntStateOf(0) }
+    val currentUserId = (authState as? AuthState.SignedIn)?.session?.user?.id
+    fun reload() {
+        loading = true
+        scope.launch {
+            runCatching { withContext(Dispatchers.IO) { apiClient.fetchParagraphComments(target.postId) } }
+                .onSuccess { comments = it; error = null }
+                .onFailure { error = it.message ?: "段评加载失败" }
+            loading = false
+        }
+    }
+    LaunchedEffect(target) { reload() }
+    val activeComments = comments?.let { all ->
+        (0 until all.length()).mapNotNull { all.optJSONObject(it) }
+            .filter { it.optString("anchor_quote").normalizeParagraphQuote() == target.quote }
+            .flatMap { root -> listOf(root) + (0 until (root.optJSONArray("replies")?.length() ?: 0)).mapNotNull { root.optJSONArray("replies")?.optJSONObject(it) } }
+            .map { CommentItem.fromJson(it) }
+    }.orEmpty()
+    val commentGroups = activeComments.groupBy { it.parentId }
+    val rootComments = commentGroups[0].orEmpty()
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("段评", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { reload() }, enabled = !loading) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("刷新")
+                    }
+                }
+                Text(target.quote, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                if (authState is AuthState.SignedIn && replyTo == null) {
+                    CommentComposer(content, { if (it.length <= 1000) content = it }, submitting, "发布段评", "写下段评", {
+                        submitting = true
+                        scope.launch { runCatching { withContext(Dispatchers.IO) { apiClient.createParagraphComment(target.postId, content.trim(), target.quote, null) } }.onSuccess { content = ""; reload() }.onFailure { error = it.message ?: "段评发布失败" }; submitting = false }
+                    })
+                } else if (authState !is AuthState.SignedIn) {
+                    Text("选择登录账号后可以发表评论。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                when {
+                    loading -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
+                    rootComments.isEmpty() -> Text("暂无段评", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    else -> rootComments.forEach { comment ->
+                        CommentNode(
+                            comment = comment,
+                            childrenByParent = commentGroups,
+                            signedIn = authState is AuthState.SignedIn,
+                            selectionEpoch = 0,
+                            depth = 0,
+                            visited = emptySet(),
+                            onReply = { replyTo = it },
+                            likingCommentIds = emptySet(),
+                            reportedTargets = emptySet(),
+                            onCommentLike = {},
+                            onReport = {},
+                            onCommentAuthorClick = {},
+                            replyTarget = replyTo,
+                            replyText = content,
+                            submittingReply = submitting,
+                            onReplyTextChange = { if (it.length <= 1000) content = it },
+                            onCancelReply = { replyTo = null; content = "" },
+                            onSubmitReply = {
+                                val parent = replyTo
+                                if (parent != null) {
+                                    submitting = true
+                                    scope.launch { runCatching { withContext(Dispatchers.IO) { apiClient.createParagraphComment(target.postId, content.trim(), target.quote, parent.id) } }.onSuccess { content = ""; replyTo = null; reload() }.onFailure { error = it.message ?: "回复失败" }; submitting = false }
+                                }
+                            },
+                            enableLikeReport = false,
+                            currentUserId = currentUserId,
+                            deletingCommentId = deletingId,
+                            onDelete = { commentToDelete ->
+                                if (deletingId == 0) {
+                                    deletingId = commentToDelete.id
+                                    scope.launch { runCatching { withContext(Dispatchers.IO) { apiClient.deleteParagraphComment(target.postId, commentToDelete.id) } }.onSuccess { reload() }.onFailure { error = it.message ?: "删除段评失败" }; deletingId = 0 }
+                                }
+                            },
+                            contextQuotes = mapOf(comment.id to target.quote)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -8828,6 +9352,11 @@ private fun SelectableTextBlock(
 @Composable
 private fun CommentsSection(
     comments: List<CommentItem>,
+    paragraphComments: List<CommentItem>,
+    paragraphCommentRoots: List<CommentItem>,
+    paragraphCommentQuotes: Map<Int, String>,
+    currentUserId: Int?,
+    deletingCommentId: Int,
     loading: Boolean,
     error: String?,
     signedIn: Boolean,
@@ -8839,6 +9368,7 @@ private fun CommentsSection(
     onReply: (CommentItem) -> Unit,
     onCancelReply: () -> Unit,
     onSubmit: () -> Unit,
+    onDeleteComment: (CommentItem, Boolean) -> Unit,
     onRetry: () -> Unit,
     likingCommentIds: Set<Int>,
     reportedTargets: Set<String>,
@@ -8913,6 +9443,41 @@ private fun CommentsSection(
                         onReplyTextChange = onCommentTextChange,
                         onCancelReply = onCancelReply,
                         onSubmitReply = onSubmit
+                        ,currentUserId = currentUserId
+                        ,deletingCommentId = deletingCommentId
+                        ,onDelete = { onDeleteComment(it, false) }
+                    )
+                }
+            }
+            if (paragraphComments.isNotEmpty()) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text("段评", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                val paragraphGroups = paragraphComments.groupBy { it.parentId }
+                paragraphCommentRoots.forEach { comment ->
+                    CommentNode(
+                        comment = comment,
+                        childrenByParent = paragraphGroups,
+                        signedIn = signedIn,
+                        selectionEpoch = selectionEpoch,
+                        depth = 0,
+                        visited = emptySet(),
+                        onReply = onReply,
+                        likingCommentIds = emptySet(),
+                        reportedTargets = emptySet(),
+                        onCommentLike = {},
+                        onReport = {},
+                        onCommentAuthorClick = onCommentAuthorClick,
+                        replyTarget = replyTarget,
+                        replyText = commentText,
+                        submittingReply = submitting,
+                        onReplyTextChange = onCommentTextChange,
+                        onCancelReply = onCancelReply,
+                        onSubmitReply = onSubmit,
+                        enableLikeReport = false,
+                        currentUserId = currentUserId,
+                        deletingCommentId = deletingCommentId,
+                        onDelete = { onDeleteComment(it, true) },
+                        contextQuotes = paragraphCommentQuotes
                     )
                 }
             }
@@ -8939,7 +9504,12 @@ private fun CommentNode(
     submittingReply: Boolean,
     onReplyTextChange: (String) -> Unit,
     onCancelReply: () -> Unit,
-    onSubmitReply: () -> Unit
+    onSubmitReply: () -> Unit,
+    enableLikeReport: Boolean = true,
+    currentUserId: Int? = null,
+    deletingCommentId: Int = 0,
+    onDelete: (CommentItem) -> Unit = {},
+    contextQuotes: Map<Int, String> = emptyMap()
 ) {
     if (comment.id in visited) return
     val nextVisited = visited + comment.id
@@ -8969,7 +9539,12 @@ private fun CommentNode(
             submittingReply = submittingReply,
             onReplyTextChange = onReplyTextChange,
             onCancelReply = onCancelReply,
-            onSubmitReply = onSubmitReply
+            onSubmitReply = onSubmitReply,
+            enableLikeReport = enableLikeReport
+            ,currentUserId = currentUserId
+            ,deletingCommentId = deletingCommentId
+            ,onDelete = { onDelete(comment) }
+            ,contextQuote = contextQuotes[comment.id]
         )
         childrenByParent[comment.id].orEmpty().filterNot { it.id in nextVisited }.forEach { child ->
             Spacer(Modifier.height(8.dp))
@@ -8991,7 +9566,12 @@ private fun CommentNode(
                 submittingReply = submittingReply,
                 onReplyTextChange = onReplyTextChange,
                 onCancelReply = onCancelReply,
-                onSubmitReply = onSubmitReply
+                onSubmitReply = onSubmitReply,
+                enableLikeReport = enableLikeReport
+                ,currentUserId = currentUserId
+                ,deletingCommentId = deletingCommentId
+                ,onDelete = onDelete
+                ,contextQuotes = contextQuotes
             )
         }
     }
@@ -9014,7 +9594,12 @@ private fun CommentCard(
     submittingReply: Boolean,
     onReplyTextChange: (String) -> Unit,
     onCancelReply: () -> Unit,
-    onSubmitReply: () -> Unit
+    onSubmitReply: () -> Unit,
+    enableLikeReport: Boolean = true,
+    currentUserId: Int? = null,
+    deletingCommentId: Int = 0,
+    onDelete: () -> Unit = {},
+    contextQuote: String? = null
 ) {
     val indent = (depth.coerceAtMost(6) * 14).dp
     Column(
@@ -9045,17 +9630,17 @@ private fun CommentCard(
                     )
                 }
             }
-            TextButton(onClick = onLike, enabled = !liking) {
-                Icon(
-                    if (comment.liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
+            if (enableLikeReport) TextButton(onClick = onLike, enabled = !liking) {
+                Icon(if (comment.liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(if (comment.likeCount > 0) comment.likeCount.toString() else "赞同", maxLines = 1)
             }
         }
         Spacer(Modifier.height(10.dp))
+        contextQuote?.let {
+            Text("段评：${it.take(80)}${if (it.length > 80) "…" else ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+        }
         SelectableTextBlock(
             text = comment.content,
             modifier = Modifier.fillMaxWidth(),
@@ -9075,10 +9660,16 @@ private fun CommentCard(
                 TextButton(onClick = onReply) {
                     Text("回复", maxLines = 1)
                 }
-                TextButton(onClick = onReport, enabled = !reported) {
+                if (enableLikeReport) TextButton(onClick = onReport, enabled = !reported) {
                     Icon(Icons.Default.Flag, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text(if (reported) "已举报" else "举报", maxLines = 1)
+                }
+                if (comment.userId == currentUserId) TextButton(onClick = onDelete, enabled = deletingCommentId != comment.id) {
+                    if (deletingCommentId == comment.id) CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Default.Delete, contentDescription = "删除", modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("删除", maxLines = 1)
                 }
             }
             if (isReplying) {
@@ -9385,6 +9976,9 @@ private fun screenTitle(screen: Screen): String {
         Screen.Home -> "IGNGbbs"
         Screen.Columns -> "专栏"
         Screen.History -> "历史记录"
+        Screen.Favorites -> "收藏文章"
+        Screen.Following -> "订阅用户"
+        Screen.Privacy -> "隐私设置"
         Screen.Notifications -> "通知中心"
         Screen.ConsoleHome -> "控制台"
         Screen.ConsolePosts -> "文章管理"
@@ -9392,6 +9986,7 @@ private fun screenTitle(screen: Screen): String {
         is Screen.ConsolePostEditor -> "编辑文章"
         is Screen.ConsolePostSettings -> "文章设置"
         Screen.ConsoleComments -> "评论管理"
+        Screen.ConsoleAdmin -> "全站资源管理"
         Screen.ConsoleReview -> "处理中心"
         Screen.ConsoleGroups -> "群组管理"
         Screen.ConsoleGroupCreate -> "新建群组"
@@ -9423,6 +10018,19 @@ private fun summaryText(value: String, expanded: Boolean, limit: Int = 120): Str
 private fun friendlyDateTime(value: String?): String {
     if (value.isNullOrBlank()) return "未知时间"
     return value.replace("T", " ").replace("Z", "").take(19)
+}
+
+private fun String.normalizeParagraphQuote(): String {
+    val paragraph = replace("\r\n", "\n")
+        .split(Regex("\n\\s*\n"))
+        .firstOrNull { it.trim().isNotBlank() }
+        .orEmpty()
+        .replace(Regex("""^#{1,6}\s+"""), "")
+        .replace(Regex("""!?(\[[^]]*])\([^)]*\)"""), "$1")
+        .replace(Regex("[*_`~]"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+    return paragraph.takeIf { it.length <= 500 }.orEmpty()
 }
 
 private fun extractArticleSections(post: Post): List<ArticleSectionEntry> {
