@@ -1,5 +1,4 @@
 # Local agent instructions and private deployment notes
-AGENTS.md
 
 # OS / editor files
 .DS_Store
@@ -51,3 +50,4 @@ nas-backup.local.psd1
 **/*.bak
 **/*-Window开发机.*
 **/*-Window-path-backup/
+# AGENTS.md 已纳入版本控制（agent 约定必须随仓库走）
