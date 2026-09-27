@@ -46,3 +46,8 @@ Android/signing/
 artifacts/
 nas-backup.local.json
 nas-backup.local.psd1
+
+# Local backup copies and machine-specific snapshots
+**/*.bak
+**/*-Window开发机.*
+**/*-Window-path-backup/
