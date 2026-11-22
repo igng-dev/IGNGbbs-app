@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_search"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_search_short"
+        android:shortcutLongLabel="@string/shortcut_search_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="igngbbs://open/search"
+            android:targetPackage="net.igng.bbs"
+            android:targetClass="net.igng.bbs.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_write"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_write_short"
+        android:shortcutLongLabel="@string/shortcut_write_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="igngbbs://open/editor"
+            android:targetPackage="net.igng.bbs"
+            android:targetClass="net.igng.bbs.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_inbox"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_inbox_short"
+        android:shortcutLongLabel="@string/shortcut_inbox_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="igngbbs://open/inbox"
+            android:targetPackage="net.igng.bbs"
+            android:targetClass="net.igng.bbs.MainActivity" />
+    </shortcut>
+</shortcuts>

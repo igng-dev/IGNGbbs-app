@@ -1,0 +1,39 @@
+{
+  "risk": {
+    "article": {
+      "active": false,
+      "until": null,
+      "reason": null,
+      "approved": 10,
+      "rejected": 0,
+      "total": 10,
+      "rejection_rate": 0,
+      "window_days": 30
+    },
+    "comment": {
+      "active": false,
+      "until": null,
+      "reason": null,
+      "strikes": 0,
+      "window_days": 30
+    }
+  },
+  "reviews": [
+    {
+      "id": "rev_801",
+      "numeric_id": 801,
+      "target_type": "post",
+      "target_id": "post_2048",
+      "target_title": "IGNG Bento 2.0 移动端动效设计实践",
+      "review_type": "initial",
+      "status": "success",
+      "outcome": "approved",
+      "rejection_reason": null,
+      "suggestion": null,
+      "has_pending_appeal": false,
+      "created_at": "2026-11-22T12:00:00Z",
+      "decided_at": "2026-11-22T12:00:00Z"
+    }
+  ],
+  "appeals": []
+}
