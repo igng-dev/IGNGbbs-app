@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">IGNGBBS</string>
+    <string name="app_name">IGNG BBS</string>
+    <string name="shortcut_search_short">搜索文章</string>
+    <string name="shortcut_search_long">搜索 IGNG BBS 文章与专栏</string>
+    <string name="shortcut_write_short">写新文章</string>
+    <string name="shortcut_write_long">打开编辑器创作文章</string>
+    <string name="shortcut_inbox_short">消息通知</string>
+    <string name="shortcut_inbox_long">查看未读通知与提及</string>
 </resources>

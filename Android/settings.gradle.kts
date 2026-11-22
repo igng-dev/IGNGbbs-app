@@ -23,4 +23,19 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "IGNGBBS"
-include(":app")
+include(
+    ":app",
+    ":core:model",
+    ":core:designsystem",
+    ":core:network",
+    ":core:auth",
+    ":core:markdown",
+    ":core:data",
+    ":feature:feed",
+    ":feature:column",
+    ":feature:post",
+    ":feature:inbox",
+    ":feature:creator",
+    ":feature:profile",
+    ":feature:admin",
+)

@@ -13,12 +13,14 @@ Worktree: `~/项目/.wt/IGNGbbs应用/<slug>`
 
 ## 项目范围
 
-- IGNG BBS 的官方 Android 客户端，工程入口在 `Android/`（Kotlin / Java + Jetpack Compose）。
-- 默认服务地址（`IGNG_BBS_BASE_URL`、`IGNG_SSO_BASE_URL`）写在公开构建配置里；不得把测试地址、内网地址、账号或凭据写进源码。
+- IGNG BBS 的官方 Android 客户端（v2.0 原生重构），正式包名 `net.igng.bbs`，最低版本 `minSdk = 26`，工程入口在 `Android/`（Kotlin + Jetpack Compose 14 模块架构）。
+- **严格只覆盖 BBS 社区领域，不包含 Ink 系列**（小说 / 漫画 / 电子书 / 书评 / 读书会 / Ink 创作与阅读器）。严禁在客户端引入任何 `ink_*` 字段、接口或入口。
+- 默认服务地址（`IGNG_API_BASE_URL`、`IGNG_BBS_BASE_URL`、`IGNG_SSO_BASE_URL`）写在公开构建配置里；不得把测试地址、内网地址、账号或凭据写进源码。
 
-## 接口归属
+## 接口与契约归属
 
-- 站点端是同级目录 `~/项目/IGNG/IGNG站点`。涉及接口新增或变更时，在站点仓库修改并遵循其文档完成构建与部署；不得在客户端复制或伪造服务端业务规则。
+- 客户端统一通过 `IGNG站点`（`~/项目/IGNG/IGNG站点`）的一方 Client API v1（`https://www.igng.net/api/v1/bbs/**`、`/api/v1/devices`、`/api/v1/users/me/**`、`/api/v1/media/**`）与 OAuth 2.1 PKCE（`igng_bbs_android`，回调 `igngbbs://auth/callback`）通信。
+- 涉及接口新增或变更时，须先在 `IGNG站点` 修改并更新 `contracts/fixtures/igngbbs-v1/*.json`，再同步黄金样本至本仓库 `Android/core/data/src/test/resources/fixtures/v1/` 并通过 `DtoDeserializationTest` 校验；不得在客户端复制或伪造服务端业务规则。
 
 ## 开始工作前
 

@@ -1,215 +1,83 @@
-# IGNGBBS Android
+# IGNG BBS Android（v2.0）
 
-IGNGBBS Android 是一个面向 `IGNGBBS / IGNG` 社区的官方 Android 客户端，提供更适合手机端的浏览、阅读、通知和创作管理体验。
+IGNG BBS Android 是面向 `IGNG BBS` 社区的官方原生 Android 客户端，基于 **Kotlin + Jetpack Compose** 与 **IGNG Bento 2.0** 设计语言完全重构，专注提供顺滑舒适的移动端阅读、互动、通知、自研块级所见即所得写作以及掌上社区治理体验。
 
-项目仓库：
+- 正式包名：`net.igng.bbs`（最低支持 Android 8.0 / `minSdk = 26`）
+- 领域边界：**专注 IGNG BBS 社区**，不包含 Ink 系列功能
+- 项目仓库：[igng-dev/IGNGbbs-app](https://github.com/igng-dev/IGNGbbs-app)
+- Release 下载：[Releases](https://github.com/igng-dev/IGNGbbs-app/releases)
 
-- GitHub: [IGNGserver/igngbbs-android](https://github.com/IGNGserver/igngbbs-android)
-- 当前版本：`v1.1`
-- Release 下载: [Releases](https://github.com/IGNGserver/igngbbs-android/releases)
+## 核心特性
 
-## 软件简介
+### 1. IGNG Bento 2.0 视觉与舒适动效体系
+- 全套 Bento 2.0 卡片容器、1dp 细线描边、表格式数字对齐与浅色/深色主题
+- 以“看得更舒服”为核心的物理减速动效文法（`IgngMotion`）：支持「完整动效 / 轻柔动效 / 减少动态」三档强度与系统无障碍动态联动
+- 专属「折角核心」图形化加载态（内置 `140ms / 160ms / 240ms / 180ms` 防闪烁包络）与卡片微按压反馈
 
-这个应用围绕手机端高频使用场景设计，重点覆盖：
+### 2. OAuth 2.1 PKCE 安全认证与多账户管理
+- 采用一方 `igng_bbs_android` OAuth 2.1 Authorization Code + PKCE S256 授权（系统 Custom Tabs，零 WebView 密码收集）
+- 硬件级 Android Keystore `AES-256-GCM` 加密多账户凭据库，支持单飞（Single-Flight）令牌轮换刷新与防重放吊销
+- 内置多账户快速切换、每日签到 EXP 自动结算提示以及登录设备管理（查看 / 重命名 / 吊销）
 
-- 浏览首页内容、专栏内容和筛选后的文章列表
-- 登录 IGNG 账号并在多个已登录账号间切换
-- 阅读文章、保存阅读进度、跳转上次阅读位置
-- 查看评论、发表评论、点赞、举报
-- 查看系统通知和回复通知
-- 查看历史记录与最近访问内容
-- 在移动端使用创作者控制台管理文章、评论、专栏、系列和个人资料
+### 3. 首页推荐、专栏广场与原生阅读器
+- **首页信息流**：社区精选横向卡片（热议 / 升温 / 讨论 / 新作者等）、本地断点「继续阅读」进度卡、分类与热门标签轨、最新/热门排序、同系列文章手风琴折叠
+- **专栏广场**：支持多级嵌套专栏面包屑、子专栏浏览、置顶文章以及开放/申请加入与直接/审核/口令订阅状态机
+- **原生 Markdown / HTML 阅读器**：零 WebView，原生渲染标题、引用、语法代码块（一键复制）、表格、任务清单、多图缩放画廊灯箱、目录跳转、暖纸/深墨/默认画布与字号行距调节、`ban_status=4` 受限内容提示门控
+- **评论与互动**：嵌套楼层回复、`最早/最新/最热` 排序、15 秒轻量新评论提醒条、折叠评论展开、未通过评论在线重提、`@` 用户联想提及与 12 类社区规范举报
+- **App Links 深度链接**：支持 `https://www.igngbbs.net/post/...`、`user/...`、`columns/...`、`tags/...`、`pages/rules` 直达客户端
 
-## 主要功能
+### 4. 创作中心与自研原生块级所见即所得编辑器
+- **自研块级 WYSIWYG 编辑器**（Jetpack Compose）：支持 H1–H4 标题、正文、无序/有序/待办列表、引用、代码块（语言切换）、表格、分割线、相册直传图片（Photo Picker）与视频嵌入
+- 支持块上下移动、块类型转换、行内加粗/斜体/代码/高亮/删除线/链接快捷条、撤销/重做历史、本地草稿防丢恢复，以及一键无损切换「块级编辑 / Markdown 源码 / 实时阅读预览」
+- **全功能创作者工具**：30 天阅读趋势折线图与来源分布、今日投稿配额、文章草稿/历史版本恢复/协作者邀请管理、专栏与事件审批、系列章节编排、评论管理、双域风控仪表盘、审核与申诉 v2（多轮申诉）、云端媒体资产与配额管理
 
-### 1. 账号与登录
+### 5. 统一收件箱与掌上社区治理台
+- **统一收件箱**：整合系统通知、`@` 提及、回复与专栏事件，支持检索、仅看未读、已读同步与 WorkManager 后台定期提醒
+- **社区治理控制台（RBAC 实时门控）**：仅对具备 BBS 管理权限的账户可见，覆盖帖子治理（状态/可见度/封禁）、人工审核队列、举报队列处置、用户双域风控（`article` / `comment`）设置与解除、用户检索及专栏/系列管理
 
-- 支持使用 IGNG 账号登录
-- 支持多账号共存与快速切换
-- 支持退出登录
-- 登录后可同步读取与你账号权限相关的内容
+## 模块架构（14 Modules）
 
-### 2. 首页与内容浏览
+- `:app` — 应用壳层、Navigation Compose 路由、App Links / 快捷方式与后台通知同步
+- `:core:model` — 站点端点、偏好配置、账户模型与 Client API v1 全量 DTO
+- `:core:network` — OkHttp 客户端、统一错误映射、`Idempotency-Key` 与 Single-Flight 401 刷新器
+- `:core:auth` — PKCE S256、Android Keystore AES-256-GCM 凭据库、Custom Tabs OAuth 管理器
+- `:core:designsystem` — IGNG Bento 2.0 主题、动效文法、折角核心加载器、图表、灯箱与 BBS 业务组件
+- `:core:markdown` — 原生 Markdown / HTML AST 解析器、Compose 渲染画布与自研块级 WYSIWYG 文档编解码器
+- `:core:data` — DataStore 本地持久化、SWR 磁盘缓存、7 大业务 Repository 与 DI 容器
+- `:feature:feed` / `:feature:column` / `:feature:post` / `:feature:inbox` / `:feature:creator` / `:feature:profile` / `:feature:admin`
 
-- 首页浏览文章列表
-- 按分类、标签、作者、专栏等条件筛选内容
-- 查看用户主页
-- 浏览专栏及其文章
+## 本地开发与构建
 
-### 3. 阅读体验
+### 环境要求
+- JDK 17 或 21
+- Android SDK（`compileSdk 36`，`minSdk 26`）
 
-- 内置阅读器页面
-- 支持记录阅读进度
-- 支持恢复到上次阅读位置
-- 支持分享文章链接
-- 支持处理系列文章的连续阅读
+### 构建与单元测试
 
-### 4. 评论与互动
+```bash
+cd Android
+./gradlew assembleDebug testDebugUnitTest
+```
 
-- 查看文章评论区
-- 发表评论与回复评论
-- 评论点赞
-- 举报内容
+Windows PowerShell：
 
-### 5. 通知与历史记录
+```powershell
+cd Android
+.\gradlew.bat assembleDebug testDebugUnitTest
+```
 
-- 通知中心查看系统通知
-- 支持回复通知提醒
-- 支持系统通知开关控制
-- 查看最近访问的历史记录
-- 删除单条历史记录
-
-### 6. 收藏、关注与订阅
-
-- 收藏文章，并在“收藏文章”中集中查看
-- 订阅用户，并在“订阅用户”中管理关注关系
-- 订阅专栏，查看已订阅 / 审核中等状态
-- 在用户主页与专栏页快速完成关注或订阅操作
-
-### 7. 互动增强
-
-- 首页支持“最新 / 热门”排序切换
-- 支持段落评论（基于段落锚点的评论与回复）
-- 支持删除自己的评论
-- 阅读器中可复制段落链接、记录阅读进度
-- 支持隐私设置：控制关注列表与收藏可见性
-
-### 8. 创作者控制台
-
-如果当前账号拥有相应权限，可在移动端直接使用控制台能力：
-
-- 创作者总览
-- 文章管理
-- 新建文章
-- 编辑文章
-- 评论管理
-- 专栏管理
-- 系列管理
-- 创作者资料维护
-- 群组与权限相关管理
-
-### 9. 全站资源管理（管理员）
-
-具备管理员权限时，可在移动端进行全站资源管理：
-
-- 管理文章、页面、评论、专栏、系列
-- 处理审核队列与举报
-- 管理用户权限字段
-- 发送系统通知
-- 删除指定资源
-
-## 如何使用
-
-### 安装
-
-1. 打开 [Releases](https://github.com/IGNGserver/igngbbs-android/releases) 页面
-2. 下载最新的 `apk`
-3. 在 Android 设备上安装应用
-
-如果系统提示来源未知，请先在设备设置中允许对应来源安装应用。
-
-### 首次打开
-
-首次进入应用后，建议按下面顺序使用：
-
-1. 先浏览首页与专栏，确认基础内容加载正常
-2. 进入“我的”或账号相关页面登录 IGNG 账号
-3. 登录后再使用历史记录、通知中心、评论和创作者控制台等需要账号状态的功能
-
-### 阅读文章
-
-常见阅读流程：
-
-1. 在首页、专栏页或筛选页打开文章
-2. 进入阅读器后开始浏览正文
-3. 退出前可保存阅读进度
-4. 下次可直接恢复到上次阅读位置
-
-### 管理通知
-
-如果设备允许通知权限，可以在应用内进一步控制：
-
-- 是否接收系统通知
-- 是否接收回复通知
-
-这样可以减少无关提醒，同时保留重要互动消息。
-
-### 使用创作者控制台
-
-登录后，如果你的账号具备创作者权限，可以进入控制台执行移动端管理操作，例如：
-
-- 查看创作者总览数据
-- 管理自己发布的文章
-- 维护专栏和系列
-- 处理评论
-- 编辑创作者资料
-
-## 适用人群
-
-这个应用适合以下用户：
-
-- 希望在手机上方便浏览 IGNGBBS 的普通读者
-- 需要随时查看通知和评论互动的活跃用户
-- 需要用手机处理文章、专栏、系列和评论的创作者
-
-## 技术说明
-
-- 平台：Android
-- UI：Jetpack Compose
-- 语言：Kotlin / Java
-- 最低 Android 版本：`minSdk 24`
-
-默认服务地址通过 Gradle 配置读取，未额外指定时使用生产地址：
-
+默认服务地址可通过 Gradle 属性覆写：
+- `IGNG_API_BASE_URL=https://www.igng.net`
 - `IGNG_BBS_BASE_URL=https://www.igngbbs.net`
 - `IGNG_SSO_BASE_URL=https://sso.igng.net`
 
-## 本地开发
+### 隐私检查
 
-### 环境要求
+提交前必须通过敏感信息扫描：
 
-- Android Studio
-- Android SDK
-- JDK 11 或兼容版本
-
-### 运行项目
-
-1. 使用 Android Studio 打开 `Android/`
-2. 等待 Gradle 同步完成
-3. 直接运行应用
-
-命令行构建调试包：
-
-```powershell
-cd Android
-.\gradlew.bat assembleDebug
+```bash
+bash scripts/check-privacy.sh --all
 ```
-
-### 构建正式包
-
-正式包使用本地签名配置，不会上传到 Git：
-
-- 签名文件目录：`Android/signing/`
-- 本地签名配置：`Android/release-signing.properties`
-
-构建正式 APK：
-
-```powershell
-cd Android
-.\gradlew.bat assembleRelease
-```
-
-## 发布与仓库约定
-
-- Release 安装包通过 GitHub Releases 分发
-- 本地 SDK 路径、签名信息、构建产物、私有配置均不进入版本控制
-- 项目内保留本地签名材料，是为了保证后续版本仍可持续更新安装
-
-## 已知说明
-
-- 某些功能依赖账号权限、等级或站点侧能力开放情况
-- 通知功能依赖 Android 系统通知权限
-- 与创作者权限、专栏权限、系列权限相关的页面，需要你的账号本身具备对应资格
 
 ## License
 

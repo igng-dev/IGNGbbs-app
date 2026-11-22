@@ -1,0 +1,140 @@
+{
+  "id": "post_2048",
+  "numeric_id": 2048,
+  "title": "IGNG Bento 2.0 移动端动效设计实践",
+  "excerpt": "面向长时间阅读的克制动效与弹簧节奏总结……",
+  "summary": "总结移动端 Bento 2.0 卡片节奏、阅读条自动隐退与折角核心加载器实现。",
+  "format": "markdown",
+  "tags": [
+    "compose",
+    "bento",
+    "android"
+  ],
+  "views": 1280,
+  "like_count": 86,
+  "comment_count": 14,
+  "hot_score": 420,
+  "status": 0,
+  "ban_status": 0,
+  "visibility": "public",
+  "lifecycle": "published",
+  "restriction": "none",
+  "author": {
+    "id": "usr_1024",
+    "numeric_id": 1024,
+    "username": "linmo",
+    "nickname": "林墨",
+    "avatar_url": "https://www.igng.net/api/v1/media/med_0123456789abcdef0123456789abcdef/content",
+    "bio": "热爱简洁设计的开发者",
+    "is_following": true
+  },
+  "category": {
+    "id": "cat_1",
+    "numeric_id": 1,
+    "name": "技术讨论",
+    "slug": "tech",
+    "description": "工程实践、开发日志与技术分享"
+  },
+  "column": {
+    "id": "col_12",
+    "numeric_id": 12,
+    "name": "客户端工程札记",
+    "slug": "client-notes",
+    "description": "移动端与跨平台技术专栏",
+    "bio_status": 0,
+    "join_mode": "open",
+    "visitor_view_scope": "all",
+    "subscription_mode": "direct",
+    "parent_id": null,
+    "creator": {
+      "id": "usr_1024",
+      "numeric_id": 1024,
+      "username": "linmo",
+      "nickname": "林墨",
+      "avatar_url": "https://www.igng.net/api/v1/media/med_0123456789abcdef0123456789abcdef/content"
+    },
+    "categories": [
+      {
+        "id": "cat_1",
+        "numeric_id": 1,
+        "name": "技术讨论",
+        "slug": "tech",
+        "description": "工程实践、开发日志与技术分享",
+        "post_count": 42
+      }
+    ],
+    "member_count": 16,
+    "post_count": 9,
+    "subscriber_count": 34,
+    "child_count": 0,
+    "created_at": "2026-11-22T12:00:00Z",
+    "updated_at": "2026-11-22T12:00:00Z",
+    "web_url": "https://www.igngbbs.net/columns/client-notes"
+  },
+  "series": {
+    "id": "ser_7",
+    "numeric_id": 7,
+    "name": "Android 重构实录",
+    "slug": "android-rewrite",
+    "description": "从零重构原生客户端的完整笔记",
+    "current_index": 0,
+    "total_chapters": 2,
+    "prev_post": null,
+    "next_post": {
+      "id": "post_2049",
+      "numeric_id": 2049,
+      "title": "原生块级编辑器架构",
+      "order": 2
+    },
+    "chapters": [
+      {
+        "id": "post_2048",
+        "numeric_id": 2048,
+        "title": "IGNG Bento 2.0 移动端动效设计实践",
+        "order": 1
+      },
+      {
+        "id": "post_2049",
+        "numeric_id": 2049,
+        "title": "原生块级编辑器架构",
+        "order": 2
+      }
+    ]
+  },
+  "is_pinned": false,
+  "has_draft": false,
+  "created_at": "2026-11-22T12:00:00Z",
+  "updated_at": "2026-11-22T12:00:00Z",
+  "web_url": "https://www.igngbbs.net/post/2048",
+  "content": "# 引言\n\n这是一篇测试文章正文，包含 `kotlin` 代码块与清单。\n\n- [x] 支持 Bento 2.0\n- [x] 原生 WYSIWYG 编辑器",
+  "word_count": 420,
+  "reading_minutes": 2,
+  "restricted_warning": false,
+  "restricted_reason": null,
+  "collaborators": [
+    {
+      "id": "colab_3",
+      "numeric_id": 3,
+      "role_title": "审校",
+      "permission": "view_credit",
+      "user": {
+        "id": "usr_1025",
+        "numeric_id": 1025,
+        "username": "qinghe",
+        "nickname": "清和",
+        "avatar_url": null
+      }
+    }
+  ],
+  "viewer_state": {
+    "is_liked": true,
+    "is_favorited": true,
+    "is_following_author": true,
+    "is_owner": true,
+    "can_edit": true,
+    "can_manage": true
+  },
+  "media_urls": {
+    "0123456789abcdef0123456789abcdef": "https://www.igng.net/api/v1/media/med_0123456789abcdef0123456789abcdef/content?post_id=post_2048"
+  }
+}

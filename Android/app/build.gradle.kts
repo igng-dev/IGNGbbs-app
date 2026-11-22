@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 val releaseSigningPropertiesFile = rootProject.file("release-signing.properties")
@@ -15,24 +16,28 @@ val releaseStoreFile = releaseSigningProperties.getProperty("storeFile")
 val releaseStorePassword = releaseSigningProperties.getProperty("storePassword")
 val releaseKeyAlias = releaseSigningProperties.getProperty("keyAlias")
 val releaseKeyPassword = releaseSigningProperties.getProperty("keyPassword")
-val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+    .all { !it.isNullOrBlank() }
+
+val apiBaseUrl = providers.gradleProperty("IGNG_API_BASE_URL").orElse("https://www.igng.net").get()
+val bbsBaseUrl = providers.gradleProperty("IGNG_BBS_BASE_URL").orElse("https://www.igngbbs.net").get()
+val ssoBaseUrl = providers.gradleProperty("IGNG_SSO_BASE_URL").orElse("https://sso.igng.net").get()
 
 android {
-    namespace = "com.example.igngbbs"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    namespace = "net.igng.bbs"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.igngbbs"
-        minSdk = 24
+        applicationId = "net.igng.bbs"
+        minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 20000
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "IGNG_API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "IGNG_BBS_BASE_URL", "\"$bbsBaseUrl\"")
+        buildConfigField("String", "IGNG_SSO_BASE_URL", "\"$ssoBaseUrl\"")
     }
 
     signingConfigs {
@@ -48,50 +53,66 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
         }
     }
+
     buildFeatures {
         buildConfig = true
         compose = true
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
-    val bbsBaseUrl = providers.gradleProperty("IGNG_BBS_BASE_URL")
-        .orElse("https://www.igngbbs.net")
-        .get()
-    val ssoBaseUrl = providers.gradleProperty("IGNG_SSO_BASE_URL")
-        .orElse("https://sso.igng.net")
-        .get()
-    defaultConfig {
-        buildConfigField("String", "IGNG_BBS_BASE_URL", "\"$bbsBaseUrl\"")
-        buildConfigField("String", "IGNG_SSO_BASE_URL", "\"$ssoBaseUrl\"")
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
 dependencies {
+    implementation(project(":core:model"))
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:network"))
+    implementation(project(":core:auth"))
+    implementation(project(":core:markdown"))
+    implementation(project(":core:data"))
+    implementation(project(":feature:feed"))
+    implementation(project(":feature:column"))
+    implementation(project(":feature:post"))
+    implementation(project(":feature:inbox"))
+    implementation(project(":feature:creator"))
+    implementation(project(":feature:profile"))
+    implementation(project(":feature:admin"))
+
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.compose.material)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.markwon.core)
-    implementation(libs.markwon.ext.tables)
-    implementation(libs.markwon.html)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
 }

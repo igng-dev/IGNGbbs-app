@@ -1,6 +1,8 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.IGNGBBS" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:windowLightStatusBar">false</item>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.IGNGBBS" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">#0B0F16</item>
     </style>
 </resources>
