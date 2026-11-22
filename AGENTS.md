@@ -1,22 +1,74 @@
-# IGNGbbs应用（igngbbs-android）· 项目 Agent 规范
-> 只写本仓库与设备级规范的差异。Git 纪律、worktree、冲突处理见 `~/.qoder/coder-rules/global-rules.md`。
+# IGNGbbs应用（igng-dev/IGNGbbs-app）· 项目 Agent 规范
+
+本文件适用于所有编码 Agent（Codex / Qoder / Claude / Gemini / opencode），会随仓库带到 Windows 与 Android 开发机。
+> 设备级规范：`~/.qoder/coder-rules/global-rules.md`（本机所有 harness 已引入）。以下 7 行是模式判定，正文为仓库自有约定；冲突时安全条款以设备级为准。`CLAUDE.md` 仅作 `@AGENTS.md` 薄指针，改约定只改本文件，不要双写。
 
 Collaboration: collaborative
+Baseline: main
 Default branch: main
-Integration: direct-after-validation
-Release: manual，发布脚本由人执行（**本仓库无 CI workflow**）
+Integration: pull-request
+Release: manual / tag-increment-only（发布脚本 `publish-release.ps1` 与备份脚本 `backup-release-to-nas.ps1` 由用户手动执行，不随 PR 合并自动发生）
+Validation: 本地 `bash scripts/check-privacy.sh`（Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`）、`git diff --cached --check`；Android 构建与单测（`assembleDebug` / `testDebugUnitTest`）优先由 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）执行，排查构建问题或 CI 不可用时再在本机 `$BUILD_SCRATCH_ROOT` / worktree 执行
 Worktree: `~/项目/.wt/IGNGbbs应用/<slug>`
 
-## 这是什么
-IGNG BBS 的 Android 客户端（工程在 `Android/`，Kotlin）。
+## 项目范围
 
-## 接口归属（保留原 AGENTS.md 的唯一约定）
-- 站点端是同级目录 `~/项目/IGNG/IGNG站点`。涉及接口新增或变更时，在站点仓库修改并遵循其文档完成构建与上传；不得在客户端复制或伪造服务端规则。
+- IGNG BBS 的官方 Android 客户端，工程入口在 `Android/`（Kotlin / Java + Jetpack Compose）。
+- 默认服务地址（`IGNG_BBS_BASE_URL`、`IGNG_SSO_BASE_URL`）写在公开构建配置里；不得把测试地址、内网地址、账号或凭据写进源码。
 
-## 验证命令
-- `cd Android && ./gradlew assembleDebug`（AGP 标准任务，**尚未在本仓库实测跑通**）；失败要报告缺口，不得跳过验证。
-- 发布与备份脚本 `publish-release.ps1`、`backup-release-to-nas.ps1` 属 Windows 侧，**由用户执行**，Agent 只给命令。
+## 接口归属
 
-## 项目特殊限制
-- `nas-backup.local.psd1` 含 NAS 访问信息，已被 `.gitignore` 排除（仓库里只有 `nas-backup.local.example.psd1`）：**不得** `git add -f` 它，也不得把其中口令抄进任何文档、日志或提交信息。
-- 构建产物与 APK 不提交；已有 Release 与 tag 不得移动、删除或覆盖，新版本用新版本号与新文件名。
+- 站点端是同级目录 `~/项目/IGNG/IGNG站点`。涉及接口新增或变更时，在站点仓库修改并遵循其文档完成构建与部署；不得在客户端复制或伪造服务端业务规则。
+
+## 开始工作前
+
+1. 遵守设备级开工三步：`git fetch origin --prune` → 解析远端默认分支 → `wt new IGNGbbs应用 <slug>`，只在 `~/项目/.wt/IGNGbbs应用/<slug>/` 内开发；主目录停在 `_anchor` 空树分支，禁止在主目录切分支或提交。
+2. `git status --short --branch`，阅读相关源码与已有改动。
+3. 保留用户已有的未提交修改；不得使用 `git reset --hard`、`git checkout --` 等破坏性命令。
+4. 改前确认任务涉及的模块、接口契约与页面；不为完成小功能重构无关代码。
+
+## 隐私与安全（永不进入 Git / GitHub）
+
+- `local.properties`、`.env` / `.env.*`（`.env.example` 除外）、真实配置文件、本机绝对路径
+- `Android/release-signing.properties`、`Android/signing/`、`keystore.properties`、`.jks`、`.keystore`、`.p12`、`.pfx`、`.pem`、`.key`、`.der` 及口令文件
+- `nas-backup.local.psd1`、`nas-backup.local.json`（含 NAS 访问信息，仓库仅保留 `nas-backup.local.example.psd1`）
+- 账号密码、会话令牌、API key、SSH 私钥、Cookie、验证码、真实用户数据
+- 构建产物、`artifacts/`、本地 APK / AAB 及含隐私的日志、截图、临时文件
+
+改完必须扫描：
+- Linux / macOS：`bash scripts/check-privacy.sh`（全仓审计可用 `bash scripts/check-privacy.sh --all`）
+- Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`（全仓审计加 `-All`）
+- 空白与冲突标记：`git diff --cached --check`
+
+扫描失败先清除敏感内容，不得绕过 hook（`--no-verify`）或 `git add -f` 被忽略文件；疑似泄露必须在最终回复中明确说明。
+
+## 构建与验证
+
+- **默认以 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）为准**：涵盖全仓隐私扫描（`check-privacy.sh --all`）、`assembleDebug`、`testDebugUnitTest` 与调试 APK artifact。引用 CI 结果必须附 run 链接与 job 名。
+- **本地验证**（仅在排查构建问题、CI 不可用或内循环调试时）：
+  - 普通代码改动至少：`cd Android && ./gradlew assembleDebug` 与 `./gradlew testDebugUnitTest`（Windows：`.\gradlew.bat`）。
+  - 影响 Release、Manifest、依赖或签名配置：再跑 `assembleRelease`，并用 `apksigner verify --verbose --print-certs` 验证签名。
+  - 遵循设备级规范第 5c / 8 节：复用本机盘 `GRADLE_USER_HOME`（落在 `$BUILD_SCRATCH_ROOT` 下），不把构建产物留在多个 worktree 或提交进仓库。
+- 发布与备份脚本 `publish-release.ps1`、`backup-release-to-nas.ps1` 属 Windows 侧，**由用户执行**，Agent 只给命令（除非用户明确要求且在对应环境中执行）。
+- 仅文档改动（diff 仅含 `*.md`）按设备级规范第 5 节执行范围校验、文档结构检查与凭据扫描，并说明未跑项理由。
+- 失败的测试、构建警告、未执行的验证必须如实报告，不得声称已验证。
+
+## 分支与推送规范
+
+1. 只暂存本任务相关文件；Conventional Commits（`feat:` `fix:` `docs:` `test:` `chore:` `refactor:`）。
+2. 提交前再查 `git diff --cached --name-only`、`git diff --cached --check` 与隐私扫描结果。
+3. **本仓库是 `igng-dev` 组织多人协作公开仓库，`main` 受 GitHub 分支保护与本地 `pre-push` 守卫双重约束：严禁直接推送 `main`**。统一集成出口：`git push -u origin <branch>` → `gh pr create` → CI（`verify`）通过 + review → Squash Merge → `wt done IGNGbbs应用 <slug>`。
+4. 禁止对 `main` 使用 `git push --force` 或改写受保护分支历史；Agent 独占任务分支仅在必要时允许 `--force-with-lease` 并说明原因。
+5. 本机钩子：Linux/macOS 由设备级 `~/.qoder/coder-rules/install-hooks.sh` 安装（含主目录 `pre-commit` 与 `pre-push`）；Windows / 独立克隆可运行 `.\scripts\install-git-hooks.ps1`（或 `git config core.hooksPath .githooks`）启用版本化 `.githooks/`。
+6. 推送后核验远程分支、提交 hash、工作区状态并在回复中报告。
+
+## Release 保护
+
+- 已发布的 `v1.0`、`v1.1` 等 tag、Release 与 APK 下载地址**必须保持不变**：不得移动、删除、覆盖旧 tag，不得删除已有 Release 或重新上传同名资产。
+- 后续发布只能用新的递增版本号与 tag，新 APK 用新文件名与新版本号。
+- 只改 README、规则或普通代码时，不得重新构建或替换旧 Release 资产。
+- Agent 不得自行创建 Release 或打 tag，除非用户明确要求。
+
+## 最终报告
+
+说明：分支名、worktree 路径、改动文件、执行过哪些验证（含 CI run 链接与耗时）及其结果、提交 hash、PR 链接与是否已合并、是否新建 Release、以及 `wt done` 清理结果。回复/日志/提交信息中不得输出密钥、密码或完整令牌。
