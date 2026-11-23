@@ -13,11 +13,21 @@ val releaseSigningProperties = Properties().apply {
     }
 }
 val releaseStoreFile = releaseSigningProperties.getProperty("storeFile")
+    ?: providers.environmentVariable("ANDROID_SIGNING_STORE_FILE").orNull
 val releaseStorePassword = releaseSigningProperties.getProperty("storePassword")
+    ?: providers.environmentVariable("ANDROID_SIGNING_STORE_PASSWORD").orNull
 val releaseKeyAlias = releaseSigningProperties.getProperty("keyAlias")
+    ?: providers.environmentVariable("ANDROID_SIGNING_KEY_ALIAS").orNull
 val releaseKeyPassword = releaseSigningProperties.getProperty("keyPassword")
+    ?: providers.environmentVariable("ANDROID_SIGNING_KEY_PASSWORD").orNull
 val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
     .all { !it.isNullOrBlank() }
+val requireReleaseSigning = providers.environmentVariable("IGNG_REQUIRE_RELEASE_SIGNING")
+    .orNull
+    ?.equals("true", ignoreCase = true) == true
+if (requireReleaseSigning && !hasReleaseSigning) {
+    throw GradleException("Release signing is required (IGNG_REQUIRE_RELEASE_SIGNING=true) but signing credentials are missing.")
+}
 
 val apiBaseUrl = providers.gradleProperty("IGNG_API_BASE_URL").orElse("https://www.igng.net").get()
 val bbsBaseUrl = providers.gradleProperty("IGNG_BBS_BASE_URL").orElse("https://www.igngbbs.net").get()

@@ -7,8 +7,8 @@ Collaboration: collaborative
 Baseline: main
 Default branch: main
 Integration: pull-request
-Release: manual / tag-increment-only（发布脚本 `publish-release.ps1` 与备份脚本 `backup-release-to-nas.ps1` 由用户手动执行，不随 PR 合并自动发生）
-Validation: 本地 `bash scripts/check-privacy.sh`（Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`）、`git diff --cached --check`；Android 构建与单测（`assembleDebug` / `testDebugUnitTest`）优先由 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）执行，排查构建问题或 CI 不可用时再在本机 `$BUILD_SCRATCH_ROOT` / worktree 执行
+Release: cloud-workflow / tag-increment-only（经 `.github/workflows/release.yml` 在 GitHub Actions 云端使用仓库 Secrets 完成签名构建、验签与 Release 发布；推送 `v*.*.*` tag 或手动 `workflow_dispatch` 触发，不随 PR 合并自动发生）
+Validation: 本地 `bash scripts/check-privacy.sh`（Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`）、`git diff --cached --check`；Android 构建与单测（`assembleDebug` / 未签名 `assembleRelease` / DEX 校验 / `testDebugUnitTest`）优先由 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）执行，排查构建问题或 CI 不可用时再在本机 `$BUILD_SCRATCH_ROOT` / worktree 执行
 Worktree: `~/项目/.wt/IGNGbbs应用/<slug>`
 
 ## 项目范围
@@ -46,12 +46,13 @@ Worktree: `~/项目/.wt/IGNGbbs应用/<slug>`
 
 ## 构建与验证
 
-- **默认以 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）为准**：涵盖全仓隐私扫描（`check-privacy.sh --all`）、`assembleDebug`、`testDebugUnitTest` 与调试 APK artifact。引用 CI 结果必须附 run 链接与 job 名。
+- **默认以 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）为准**：涵盖全仓隐私扫描（`check-privacy.sh --all`）、`assembleDebug`、未签名 `assembleRelease`、Release DEX 校验、`testDebugUnitTest` 与调试 APK artifact。引用 CI 结果必须附 run 链接与 job 名。
+- **云端 Release 发布（`.github/workflows/release.yml`）**：签名密钥已存放在仓库 Actions Secrets（`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`）。发布新版本只需先通过 PR 递增 `Android/app/build.gradle.kts` 的 `versionCode`/`versionName`，合并后推送对应 `vX.Y.Z` tag 或在 GitHub Actions 手动触发 `Release` 工作流（支持 `dry_run` 仅验构建与签名）。
 - **本地验证**（仅在排查构建问题、CI 不可用或内循环调试时）：
   - 普通代码改动至少：`cd Android && ./gradlew assembleDebug` 与 `./gradlew testDebugUnitTest`（Windows：`.\gradlew.bat`）。
   - 影响 Release、Manifest、依赖或签名配置：再跑 `assembleRelease`，并用 `apksigner verify --verbose --print-certs` 验证签名。
   - 遵循设备级规范第 5c / 8 节：复用本机盘 `GRADLE_USER_HOME`（落在 `$BUILD_SCRATCH_ROOT` 下），不把构建产物留在多个 worktree 或提交进仓库。
-- 发布与备份脚本 `publish-release.ps1`、`backup-release-to-nas.ps1` 属 Windows 侧，**由用户执行**，Agent 只给命令（除非用户明确要求且在对应环境中执行）。
+- 历史 Windows 脚本 `publish-release.ps1` 与 NAS 备份脚本 `backup-release-to-nas.ps1` 仅留作本地/NAS 辅助，正式发版统一走云端 `.github/workflows/release.yml`。
 - 仅文档改动（diff 仅含 `*.md`）按设备级规范第 5 节执行范围校验、文档结构检查与凭据扫描，并说明未跑项理由。
 - 失败的测试、构建警告、未执行的验证必须如实报告，不得声称已验证。
 
