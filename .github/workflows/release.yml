@@ -76,8 +76,8 @@ jobs:
             exit 1
           fi
 
-          VERSION_NAME=$(grep -E '^\s*versionName\s*=' Android/app/build.gradle.kts | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
-          VERSION_CODE=$(grep -E '^\s*versionCode\s*=' Android/app/build.gradle.kts | head -n 1 | sed -E 's/.*=\s*([0-9]+).*/\1/')
+          VERSION_NAME=$(awk -F'"' '/^[[:space:]]*versionName[[:space:]]*=/ { print $2; exit }' Android/app/build.gradle.kts)
+          VERSION_CODE=$(awk -F'=' '/^[[:space:]]*versionCode[[:space:]]*=/ { gsub(/[^0-9]/, "", $2); print $2; exit }' Android/app/build.gradle.kts)
           if [ -z "$VERSION_NAME" ] || [ -z "$VERSION_CODE" ]; then
             echo "::error::无法从 Android/app/build.gradle.kts 解析 versionName / versionCode"
             exit 1
@@ -212,7 +212,7 @@ jobs:
           echo "=== apksigner verify ==="
           SIGNER_OUT=$("$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$FINAL_APK")
           printf '%s\n' "$SIGNER_OUT"
-          CERT_SHA256=$(printf '%s\n' "$SIGNER_OUT" | grep -E 'Signer #1 certificate SHA-256 digest:' | awk '{print $NF}' | tr 'A-Z' 'a-z')
+          CERT_SHA256=$(printf '%s\n' "$SIGNER_OUT" | awk '/certificate SHA-256 digest:/ { print tolower($NF); exit }')
           if [ -z "$CERT_SHA256" ]; then
             echo "::error::无法解析签名证书 SHA-256 摘要"
             exit 1
@@ -220,7 +220,8 @@ jobs:
           APP_LINKS_FP=$(printf '%s' "$CERT_SHA256" | tr 'a-f' 'A-F' | sed -E 's/(..)/\1:/g; s/:$//')
 
           echo "=== aapt2 dump badging ==="
-          BADGING_LINE=$("$BUILD_TOOLS/aapt2" dump badging "$FINAL_APK" | grep -m 1 '^package:')
+          BADGING_OUT=$("$BUILD_TOOLS/aapt2" dump badging "$FINAL_APK")
+          BADGING_LINE=$(printf '%s\n' "$BADGING_OUT" | awk '/^package:/ { print; exit }')
           echo "$BADGING_LINE"
           echo "$BADGING_LINE" | grep -q "name='net.igng.bbs'"
           echo "$BADGING_LINE" | grep -q "versionCode='${EXPECTED_VERSION_CODE}'"
