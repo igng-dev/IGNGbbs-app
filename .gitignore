@@ -1,5 +1,3 @@
-# Local agent instructions and private deployment notes
-
 # OS / editor files
 .DS_Store
 Thumbs.db
@@ -7,16 +5,15 @@ Thumbs.db
 *.swo
 *.tmp
 
-# Android / Gradle local state
+# Android / Gradle / Kotlin local state
 **/.gradle/
+**/.kotlin/
 **/build/
 **/captures/
 **/local.properties
 **/generated/
 **/externalNativeBuild/
 **/.cxx/
-Android/release-signing.properties
-Android/signing/
 
 # Android Studio / IntelliJ
 *.iml
@@ -27,27 +24,27 @@ Android/signing/
 *.hprof
 *.stacktrace
 
-# Signing keys and secrets
+# Signing keys, secrets, and local artifacts
+Android/release-signing.properties
+Android/signing/
+**/keystore/
+keystore.properties
 *.jks
 *.keystore
 *.pem
 *.p12
+*.pfx
 *.key
 *.der
-*.env
-*.env.*
-
-# Packaged outputs
+.env
+.env.*
+!.env.example
 *.apk
 *.aab
-
-# Local release archives and NAS staging
 artifacts/
 nas-backup.local.json
 nas-backup.local.psd1
 
-# Local backup copies and machine-specific snapshots
+# Local backup and script cache files
 **/*.bak
-**/*-Window开发机.*
-**/*-Window-path-backup/
-# AGENTS.md 已纳入版本控制（agent 约定必须随仓库走）
+**/__pycache__/

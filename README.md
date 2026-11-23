@@ -1,6 +1,6 @@
-# IGNG BBS Android（v2.0）
+# IGNG BBS Android
 
-IGNG BBS Android 是面向 `IGNG BBS` 社区的官方原生 Android 客户端，基于 **Kotlin + Jetpack Compose** 与 **IGNG Bento 2.0** 设计语言完全重构，专注提供顺滑舒适的移动端阅读、互动、通知、自研块级所见即所得写作以及掌上社区治理体验。
+IGNG BBS Android 是面向 `IGNG BBS` 社区的官方原生 Android 客户端，基于 **Kotlin + Jetpack Compose** 与 **IGNG Bento 2.0** 设计语言原生重构，专注提供顺滑舒适的移动端阅读、互动、通知、自研块级所见即所得写作以及掌上社区治理体验。
 
 - 正式包名：`net.igng.bbs`（最低支持 Android 8.0 / `minSdk = 26`）
 - 领域边界：**专注 IGNG BBS 社区**，不包含 Ink 系列功能
@@ -49,7 +49,7 @@ IGNG BBS Android 是面向 `IGNG BBS` 社区的官方原生 Android 客户端，
 ## 本地开发与构建
 
 ### 环境要求
-- JDK 17 或 21
+- JDK 21（Gradle Daemon 工具链锁定的主版本）
 - Android SDK（`compileSdk 36`，`minSdk 26`）
 
 ### 构建与单元测试
@@ -78,6 +78,11 @@ cd Android
 ```bash
 bash scripts/check-privacy.sh --all
 ```
+
+## 参与贡献与安全反馈
+
+- 贡献流程与钩子配置见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全漏洞与敏感信息反馈方式见 [SECURITY.md](SECURITY.md)
 
 ## License
 

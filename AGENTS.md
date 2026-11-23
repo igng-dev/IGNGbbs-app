@@ -1,77 +1,51 @@
 # IGNGbbs应用（igng-dev/IGNGbbs-app）· 项目 Agent 规范
 
-本文件适用于所有编码 Agent（Codex / Qoder / Claude / Gemini / opencode），会随仓库带到 Windows 与 Android 开发机。
-> 设备级规范：`~/.qoder/coder-rules/global-rules.md`（本机所有 harness 已引入）。以下 7 行是模式判定，正文为仓库自有约定；冲突时安全条款以设备级为准。`CLAUDE.md` 仅作 `@AGENTS.md` 薄指针，改约定只改本文件，不要双写。
+只写本仓库的领域约束、接口契约与仓库特有规则；通用 Git 纪律、worktree、冲突处理与授权语义见设备级规范 `~/.qoder/coder-rules/global-rules.md`。`CLAUDE.md` 仅作 `@AGENTS.md` 薄指针，改约定只改本文件，不要双写。
 
 Collaboration: collaborative
 Baseline: main
 Default branch: main
 Integration: pull-request
 Release: cloud-workflow / tag-increment-only（经 `.github/workflows/release.yml` 在 GitHub Actions 云端使用仓库 Secrets 完成签名构建、验签与 Release 发布；推送 `v*.*.*` tag 或手动 `workflow_dispatch` 触发，不随 PR 合并自动发生）
-Validation: 本地 `bash scripts/check-privacy.sh`（Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`）、`git diff --cached --check`；Android 构建与单测（`assembleDebug` / 未签名 `assembleRelease` / DEX 校验 / `testDebugUnitTest`）优先由 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）执行，排查构建问题或 CI 不可用时再在本机 `$BUILD_SCRATCH_ROOT` / worktree 执行
-Worktree: `~/项目/.wt/IGNGbbs应用/<slug>`
+Validation: 本地 `bash scripts/check-privacy.sh`（Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`）、`git diff --cached --check`；Android 构建、Release DEX 校验与单测（`assembleDebug` / 未签名 `assembleRelease` / `verify-release-dex.py` / `testDebugUnitTest`）由 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）执行，内循环调试可直接在本地 worktree 工作区执行
+Worktree: `~/dev/.wt/IGNGbbs应用/<slug>`
 
 ## 项目范围
 
-- IGNG BBS 的官方 Android 客户端（v2.0 原生重构），正式包名 `net.igng.bbs`，最低版本 `minSdk = 26`，工程入口在 `Android/`（Kotlin + Jetpack Compose 14 模块架构）。
+- IGNG BBS 的官方原生 Android 客户端，正式包名 `net.igng.bbs`，最低版本 `minSdk = 26`，工程入口在 `Android/`（Kotlin + Jetpack Compose 14 模块架构，Gradle Daemon 要求 JDK 21）。
 - **严格只覆盖 BBS 社区领域，不包含 Ink 系列**（小说 / 漫画 / 电子书 / 书评 / 读书会 / Ink 创作与阅读器）。严禁在客户端引入任何 `ink_*` 字段、接口或入口。
-- 默认服务地址（`IGNG_API_BASE_URL`、`IGNG_BBS_BASE_URL`、`IGNG_SSO_BASE_URL`）写在公开构建配置里；不得把测试地址、内网地址、账号或凭据写进源码。
+- 默认服务地址（`IGNG_API_BASE_URL`、`IGNG_BBS_BASE_URL`、`IGNG_SSO_BASE_URL`）写在公开 Gradle 配置里；不得把测试地址、内网地址、本机路径、账号或凭据写进源码。
 
 ## 接口与契约归属
 
-- 客户端统一通过 `IGNG站点`（`~/项目/IGNG/IGNG站点`）的一方 Client API v1（`https://www.igng.net/api/v1/bbs/**`、`/api/v1/devices`、`/api/v1/users/me/**`、`/api/v1/media/**`）与 OAuth 2.1 PKCE（`igng_bbs_android`，回调 `igngbbs://auth/callback`）通信。
+- 客户端统一通过 `IGNG站点`（同级仓库 `~/dev/IGNG/IGNG站点`）的一方 Client API v1（`https://www.igng.net/api/v1/bbs/**`、`/api/v1/devices`、`/api/v1/users/me/**`、`/api/v1/media/**`）与 OAuth 2.1 PKCE（`igng_bbs_android`，回调 `igngbbs://auth/callback`）通信。
 - 涉及接口新增或变更时，须先在 `IGNG站点` 修改并更新 `contracts/fixtures/igngbbs-v1/*.json`，再同步黄金样本至本仓库 `Android/core/data/src/test/resources/fixtures/v1/` 并通过 `DtoDeserializationTest` 校验；不得在客户端复制或伪造服务端业务规则。
-
-## 开始工作前
-
-1. 遵守设备级开工三步：`git fetch origin --prune` → 解析远端默认分支 → `wt new IGNGbbs应用 <slug>`，只在 `~/项目/.wt/IGNGbbs应用/<slug>/` 内开发；主目录停在 `_anchor` 空树分支，禁止在主目录切分支或提交。
-2. `git status --short --branch`，阅读相关源码与已有改动。
-3. 保留用户已有的未提交修改；不得使用 `git reset --hard`、`git checkout --` 等破坏性命令。
-4. 改前确认任务涉及的模块、接口契约与页面；不为完成小功能重构无关代码。
 
 ## 隐私与安全（永不进入 Git / GitHub）
 
-- `local.properties`、`.env` / `.env.*`（`.env.example` 除外）、真实配置文件、本机绝对路径
-- `Android/release-signing.properties`、`Android/signing/`、`keystore.properties`、`.jks`、`.keystore`、`.p12`、`.pfx`、`.pem`、`.key`、`.der` 及口令文件
-- `nas-backup.local.psd1`、`nas-backup.local.json`（含 NAS 访问信息，仓库仅保留 `nas-backup.local.example.psd1`）
+- `local.properties`、`.env` / `.env.*`（`.env.example` 除外）、本机个人绝对路径（`/Users/...`、`/home/...`、`C:\Users\...`）与内网私网地址/SMB 共享路径
+- 任何签名密钥、口令与凭据文件（`keystore.properties`、`release-signing.properties`、`Android/signing/`、`.jks`、`.keystore`、`.p12`、`.pfx`、`.pem`、`.key`、`.der`）
 - 账号密码、会话令牌、API key、SSH 私钥、Cookie、验证码、真实用户数据
 - 构建产物、`artifacts/`、本地 APK / AAB 及含隐私的日志、截图、临时文件
 
-改完必须扫描：
-- Linux / macOS：`bash scripts/check-privacy.sh`（全仓审计可用 `bash scripts/check-privacy.sh --all`）
+提交前必须扫描：
+- Linux / macOS：`bash scripts/check-privacy.sh`（全仓审计：`bash scripts/check-privacy.sh --all`）
 - Windows：`powershell -ExecutionPolicy Bypass -File .\scripts\check-privacy.ps1`（全仓审计加 `-All`）
 - 空白与冲突标记：`git diff --cached --check`
 
-扫描失败先清除敏感内容，不得绕过 hook（`--no-verify`）或 `git add -f` 被忽略文件；疑似泄露必须在最终回复中明确说明。
+扫描失败须先清除敏感内容，不得绕过 hook（`--no-verify`）或 `git add -f` 被忽略文件。
 
-## 构建与验证
+## 构建、验证与云端发布
 
-- **默认以 PR 上的 CI（`.github/workflows/ci.yml` 的 `verify` job）为准**：涵盖全仓隐私扫描（`check-privacy.sh --all`）、`assembleDebug`、未签名 `assembleRelease`、Release DEX 校验、`testDebugUnitTest` 与调试 APK artifact。引用 CI 结果必须附 run 链接与 job 名。
-- **云端 Release 发布（`.github/workflows/release.yml`）**：签名密钥已存放在仓库 Actions Secrets（`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`）。发布新版本只需先通过 PR 递增 `Android/app/build.gradle.kts` 的 `versionCode`/`versionName`，合并后推送对应 `vX.Y.Z` tag 或在 GitHub Actions 手动触发 `Release` 工作流（支持 `dry_run` 仅验构建与签名）。
-- **本地验证**（仅在排查构建问题、CI 不可用或内循环调试时）：
-  - 普通代码改动至少：`cd Android && ./gradlew assembleDebug` 与 `./gradlew testDebugUnitTest`（Windows：`.\gradlew.bat`）。
-  - 影响 Release、Manifest、依赖或签名配置：再跑 `assembleRelease`，并用 `apksigner verify --verbose --print-certs` 验证签名。
-  - 遵循设备级规范第 5c / 8 节：复用本机盘 `GRADLE_USER_HOME`（落在 `$BUILD_SCRATCH_ROOT` 下），不把构建产物留在多个 worktree 或提交进仓库。
-- 历史 Windows 脚本 `publish-release.ps1` 与 NAS 备份脚本 `backup-release-to-nas.ps1` 仅留作本地/NAS 辅助，正式发版统一走云端 `.github/workflows/release.yml`。
-- 仅文档改动（diff 仅含 `*.md`）按设备级规范第 5 节执行范围校验、文档结构检查与凭据扫描，并说明未跑项理由。
-- 失败的测试、构建警告、未执行的验证必须如实报告，不得声称已验证。
+- **PR 验证以 CI（`.github/workflows/ci.yml` 的 `verify` job）为准**：涵盖全仓隐私扫描（`check-privacy.sh --all`）、脚本语法校验、`assembleDebug`、未签名 `assembleRelease`、Release DEX 关键符号校验（`scripts/verify-release-dex.py`）、`testDebugUnitTest` 与调试 APK artifact。引用 CI 结论必须附 run 链接与 job 名。
+- **本地开发与内循环调试**：可直接在本地 worktree 工作区运行 `cd Android && ./gradlew assembleDebug testDebugUnitTest`（Windows：`.\gradlew.bat`），不把构建产物提交入库；仅文档改动（diff 仅含 `*.md`）按设备级规范执行范围校验、文档结构检查与凭据扫描并说明未跑项。
+- **云端 Release 发布是唯一正式签名与发版通道（`.github/workflows/release.yml`）**：
+  - 正式签名密钥统一存放在仓库 GitHub Actions Secrets（`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`），构建时经 `ANDROID_SIGNING_*` 环境变量注入 `Android/app/build.gradle.kts`，不在工作区内维护明文签名文件。
+  - 发布新版本流程：先通过 PR 递增 `Android/app/build.gradle.kts` 的 `versionCode` 与 `versionName`，合并进 `main` 后推送对应 `vX.Y.Z` tag 或在 GitHub Actions 手动触发 `Release` 工作流（支持 `dry_run=true` 仅演练签名与校验）。
+- 失败的测试、构建警告或未执行的验证必须如实报告，不得声称已验证。
 
-## 分支与推送规范
+## 协作约束与 Release 保护
 
-1. 只暂存本任务相关文件；Conventional Commits（`feat:` `fix:` `docs:` `test:` `chore:` `refactor:`）。
-2. 提交前再查 `git diff --cached --name-only`、`git diff --cached --check` 与隐私扫描结果。
-3. **本仓库是 `igng-dev` 组织多人协作公开仓库，`main` 受 GitHub 分支保护与本地 `pre-push` 守卫双重约束：严禁直接推送 `main`**。统一集成出口：`git push -u origin <branch>` → `gh pr create` → CI（`verify`）通过 + review → Squash Merge → `wt done IGNGbbs应用 <slug>`。
-4. 禁止对 `main` 使用 `git push --force` 或改写受保护分支历史；Agent 独占任务分支仅在必要时允许 `--force-with-lease` 并说明原因。
-5. 本机钩子：Linux/macOS 由设备级 `~/.qoder/coder-rules/install-hooks.sh` 安装（含主目录 `pre-commit` 与 `pre-push`）；Windows / 独立克隆可运行 `.\scripts\install-git-hooks.ps1`（或 `git config core.hooksPath .githooks`）启用版本化 `.githooks/`。
-6. 推送后核验远程分支、提交 hash、工作区状态并在回复中报告。
-
-## Release 保护
-
-- 已发布的 `v1.0`、`v1.1` 等 tag、Release 与 APK 下载地址**必须保持不变**：不得移动、删除、覆盖旧 tag，不得删除已有 Release 或重新上传同名资产。
-- 后续发布只能用新的递增版本号与 tag，新 APK 用新文件名与新版本号。
-- 只改 README、规则或普通代码时，不得重新构建或替换旧 Release 资产。
-- Agent 不得自行创建 Release 或打 tag，除非用户明确要求。
-
-## 最终报告
-
-说明：分支名、worktree 路径、改动文件、执行过哪些验证（含 CI run 链接与耗时）及其结果、提交 hash、PR 链接与是否已合并、是否新建 Release、以及 `wt done` 清理结果。回复/日志/提交信息中不得输出密钥、密码或完整令牌。
+- **本仓库是 `igng-dev` 组织多人协作公开仓库，`main` 受 GitHub 分支保护与本地 `pre-push` 守卫双重约束：严禁直接推送 `main` 或对 `main` 使用 `git push --force`**。统一集成出口：任务分支 → `gh pr create` → CI（`verify`）通过 + review → Squash Merge → `wt done IGNGbbs应用 <slug>`。
+- 独立克隆环境可通过 `git config core.hooksPath .githooks`（Windows：`.\scripts\install-git-hooks.ps1`）启用版本化钩子；已使用设备级 `~/.qoder/coder-rules/install-hooks.sh` 的机器会自动链式执行仓库 `.githooks/pre-commit`，无需切换 `core.hooksPath`。
+- **Release 不可变保护**：所有已发布的 tag（如 `v1.0`、`v1.1`、`v2.0.0`、`v2.0.1` 等）、GitHub Release 与 APK 下载链接**必须保持不变**——不得移动、删除、覆盖旧 tag，不得删除已有 Release 或替换同名资产；只改文档或普通代码时不重新构建旧版本；未获用户明确要求不打 tag、不创建 Release。
