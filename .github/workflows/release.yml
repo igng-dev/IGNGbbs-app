@@ -152,14 +152,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: 剔除机器专属 SDK 路径（local.properties 不该进仓库）
-        run: |
-          cd "Android"
-          if [ -f local.properties ] && git ls-files --error-unmatch local.properties >/dev/null 2>&1; then
-            echo "::warning file=local.properties::local.properties 被提交进仓库，CI 已临时删除"
-            rm -f local.properties
-          fi
-
       - name: 解码签名密钥到临时目录（不进入工作区）
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -228,30 +220,7 @@ jobs:
           echo "$BADGING_LINE" | grep -q "versionName='${EXPECTED_VERSION_NAME}'"
 
           echo "=== dexdump verify ==="
-          DEX_TMP=$(mktemp -d)
-          trap 'rm -rf "$DEX_TMP"' EXIT
-          unzip -q -o "$FINAL_APK" 'classes*.dex' -d "$DEX_TMP"
-          : > "$DEX_TMP/dex.txt"
-          for dex in "$DEX_TMP"/classes*.dex; do
-            "$BUILD_TOOLS/dexdump" "$dex" >> "$DEX_TMP/dex.txt"
-          done
-          python3 - "$DEX_TMP/dex.txt" <<'PY'
-          import sys
-          text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-          classes = {}
-          for c in text.split("\nClass #")[1:]:
-              for line in c.splitlines()[:5]:
-                  if "Class descriptor  : '" in line:
-                      classes[line.split("'")[1]] = c
-                      break
-          wd = classes.get("Landroidx/work/impl/WorkDatabase_Impl;", "")
-          assert "name          : '<init>'" in wd, "WorkDatabase_Impl.<init>() was stripped by R8!"
-          nw = classes.get("Lnet/igng/bbs/NotificationSyncWorker;", "")
-          assert "name          : '<init>'" in nw, "NotificationSyncWorker.<init>() was stripped by R8!"
-          vm = nw.split("Virtual methods   -")[-1]
-          assert "name          :" in vm, "NotificationSyncWorker virtual methods (doWork) were stripped by R8!"
-          print("Signed Release DEX check passed.")
-          PY
+          python3 scripts/verify-release-dex.py "$FINAL_APK" --dexdump "$BUILD_TOOLS/dexdump"
 
           {
             echo "asset_name=$ASSET_NAME"

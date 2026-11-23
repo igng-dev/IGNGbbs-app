@@ -1,25 +1,17 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
-val releaseSigningPropertiesFile = rootProject.file("release-signing.properties")
-val releaseSigningProperties = Properties().apply {
-    if (releaseSigningPropertiesFile.exists()) {
-        releaseSigningPropertiesFile.inputStream().use { load(it) }
-    }
-}
-val releaseStoreFile = releaseSigningProperties.getProperty("storeFile")
-    ?: providers.environmentVariable("ANDROID_SIGNING_STORE_FILE").orNull
-val releaseStorePassword = releaseSigningProperties.getProperty("storePassword")
-    ?: providers.environmentVariable("ANDROID_SIGNING_STORE_PASSWORD").orNull
-val releaseKeyAlias = releaseSigningProperties.getProperty("keyAlias")
-    ?: providers.environmentVariable("ANDROID_SIGNING_KEY_ALIAS").orNull
-val releaseKeyPassword = releaseSigningProperties.getProperty("keyPassword")
-    ?: providers.environmentVariable("ANDROID_SIGNING_KEY_PASSWORD").orNull
+fun signingCredential(name: String): String? =
+    providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
+        ?: providers.gradleProperty(name).orNull?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingCredential("ANDROID_SIGNING_STORE_FILE")
+val releaseStorePassword = signingCredential("ANDROID_SIGNING_STORE_PASSWORD")
+val releaseKeyAlias = signingCredential("ANDROID_SIGNING_KEY_ALIAS")
+val releaseKeyPassword = signingCredential("ANDROID_SIGNING_KEY_PASSWORD")
 val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
     .all { !it.isNullOrBlank() }
 val requireReleaseSigning = providers.environmentVariable("IGNG_REQUIRE_RELEASE_SIGNING")
