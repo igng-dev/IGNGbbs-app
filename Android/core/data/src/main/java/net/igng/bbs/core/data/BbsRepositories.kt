@@ -97,8 +97,8 @@ class FeedRepository(
         query = mapOf(
             "page" to page.toString(),
             "page_size" to pageSize.toString(),
-            "sort" to sort,
-            "category" to category,
+            "sort_by" to sort,
+            "category_slug" to category,
             "tag" to tag,
             "column_id" to columnId,
             "author_id" to authorId,
@@ -117,7 +117,7 @@ class FeedRepository(
             "q" to query,
             "page" to page.toString(),
             "page_size" to pageSize.toString(),
-            "category" to category,
+            "category_id" to category,
             "tag" to tag,
         ),
     )

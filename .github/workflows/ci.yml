@@ -43,6 +43,38 @@ jobs:
       - name: 构建 debug APK
         working-directory: Android
         run: sh ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: 构建未签名 release APK（校验 R8 裁剪）
+        working-directory: Android
+        run: sh ./gradlew assembleRelease --no-daemon --stacktrace
+      - name: 校验 release DEX 保留 WorkDatabase_Impl 构造器与 Worker 执行体
+        run: |
+          set -eu
+          APK=$(ls Android/app/build/outputs/apk/release/*.apk | head -n 1)
+          DEXDUMP=$(ls "$ANDROID_HOME"/build-tools/*/dexdump | sort -V | tail -n 1)
+          DEX_TMP=$(mktemp -d)
+          trap 'rm -rf "$DEX_TMP"' EXIT
+          unzip -q -o "$APK" 'classes*.dex' -d "$DEX_TMP"
+          : > "$DEX_TMP/dex.txt"
+          for dex in "$DEX_TMP"/classes*.dex; do
+            "$DEXDUMP" "$dex" >> "$DEX_TMP/dex.txt"
+          done
+          python3 - "$DEX_TMP/dex.txt" <<'PY'
+          import sys
+          text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+          classes = {}
+          for c in text.split("\nClass #")[1:]:
+              for line in c.splitlines()[:5]:
+                  if "Class descriptor  : '" in line:
+                      classes[line.split("'")[1]] = c
+                      break
+          wd = classes.get("Landroidx/work/impl/WorkDatabase_Impl;", "")
+          assert "name          : '<init>'" in wd, "WorkDatabase_Impl.<init>() was stripped by R8!"
+          nw = classes.get("Lnet/igng/bbs/NotificationSyncWorker;", "")
+          assert "name          : '<init>'" in nw, "NotificationSyncWorker.<init>() was stripped by R8!"
+          vm = nw.split("Virtual methods   -")[-1]
+          assert "name          :" in vm, "NotificationSyncWorker virtual methods (doWork) were stripped by R8!"
+          print("Release DEX check passed: WorkDatabase_Impl.<init>() and NotificationSyncWorker methods preserved.")
+          PY
       - name: 单元测试
         working-directory: Android
         run: sh ./gradlew testDebugUnitTest --no-daemon
